@@ -7,7 +7,7 @@ export default function Form({ onAddItems }) {
   function handleSubmit(e) {
     e.preventDefault();
 
-    if (!description) return;
+    if (!description) return; //condition for not leaving the input empty
 
     const newItem = { description, quantity, packed: false, id: Date.now() };
 
