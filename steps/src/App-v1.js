@@ -1,3 +1,4 @@
+//this was previous version in which no child props were used
 import { useState } from "react";
 
 const messages = [

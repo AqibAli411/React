@@ -1,3 +1,4 @@
+//learning use of child props in react
 import { useState } from "react";
 
 const messages = [
