@@ -1,6 +1,8 @@
 import { useState } from "react";
 import SideBar from "./SideBar";
 import FormBill from "./FormBill";
+import FriendList from "./FriendList";
+import Friend from "./Friend";
 
 const initialFriends = [
   {
@@ -42,15 +44,26 @@ export default function App() {
   function handleAddFriend(newFriend) {
     setFriendsList((friendsList) => [...friendsList, newFriend]);
   }
+  
+  console.log(selectedId);
 
   return (
     <div className="app">
-      <SideBar
-        friendsList={friendsList}
-        onAddFriend={handleAddFriend}
-        selectedId={selectedId}
-        setSelectedId={setSelectedId}
-      />
+      <SideBar friendsList={friendsList} onAddFriend={handleAddFriend}>
+        <FriendList>
+          {friendsList.map((friend) => (
+            <Friend
+              name={friend.name}
+              balance={friend.balance}
+              image={friend.image}
+              key={friend.id}
+              selectedId={selectedId}
+              onSetSelectedId={setSelectedId}
+              id={friend.id}
+            />
+          ))}
+        </FriendList>
+      </SideBar>
       {selectedId !== null && (
         <FormBill
           name={

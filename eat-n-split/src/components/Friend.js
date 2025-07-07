@@ -1,4 +1,3 @@
-
 export default function Friend({
   name,
   balance,

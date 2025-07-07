@@ -1,12 +1,9 @@
 import { useState } from "react";
 import FormAddFriend from "./FormAddFriend";
-import FriendList from "./FriendList";
 
 export default function SideBar({
-  friendsList,
   onAddFriend,
-  selectedId,
-  setSelectedId,
+  children
 }) {
   //this is for add firend button
   const [isClicked, setIsClicked] = useState(false);
@@ -17,11 +14,7 @@ export default function SideBar({
 
   return (
     <div className="sidebar">
-      <FriendList
-        friendsList={friendsList}
-        selectedId={selectedId}
-        onSetSelectedId={setSelectedId}
-      />
+      {children}
 
       {isClicked ? (
         <>
