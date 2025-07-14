@@ -71,6 +71,7 @@ export default function App() {
           }
           onGetBalance={getBalance}
           onSetSelectedId={setSelectedId}
+          key = {selectedId}
         />
       )}
     </div>
