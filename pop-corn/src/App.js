@@ -103,29 +103,15 @@ function Logo() {
 
 function Search({ query, onSetQuery, onSetSelectedId }) {
   const inputEl = useRef(null);
-  const constraint = document.activeElement === inputEl.current;
-  function printSomething() {
-    console.log("hello");
-  }
-  useKey("Enter", constraint, printSomething);
-
-  // useEffect(
-  //   function () {
-  //     function handleKeyDown(e) {
-  //       if (document.activeElement === inputEl.current) return;
-
-  //       if (e.code === "Enter") {
-  //         inputEl.current.focus();
-  //         onSetQuery("");
-  //       }
-  //     }
-
-  //     document.addEventListener("keydown", handleKeyDown);
-
-  //     return () => document.removeEventListener("keydown", handleKeyDown);
-  //   },
-  //   [onSetQuery]
-  // );
+  
+  useKey(
+    "Enter",
+    function () {
+      if (inputEl.current === document.activeElement) return;
+      onSetQuery("");
+      inputEl.current.focus();
+    }
+  );
 
   return (
     <input
@@ -167,8 +153,10 @@ function MovieDetails({
   const [movie, setMovie] = useState({});
   const [rating, setRating] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
   const countRatingClikcs = useRef(0);
+
+  //custom hook designed for handling key down events
+  useKey("Escape", handleResetSelection);
 
   //to use ref we have to create a useEffect
   useEffect(
@@ -241,25 +229,6 @@ function MovieDetails({
     },
     [movie]
   );
-
-  // a key and callback as a parameters
-  // a useEffect
-  //
-
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.code === "Escape") {
-        handleResetSelection();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    // Cleanup function - removes the listener
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleResetSelection]);
 
   // if the movie is already in the watched array then display its rating...
   // using some-> we can definetly check if it already exists if it exists
