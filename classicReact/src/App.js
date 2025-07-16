@@ -1,21 +1,15 @@
 import React from 'react';
 
 class Component extends React.Component {
-  constructor(props) {
-    super(props);
+  state = { count: 0 }
 
-    this.state = { count: 0 };
-    this.handleIncrement = this.handleIncrement.bind(this);
-    this.handleDecrement = this.handleDecrement.bind(this);
-  }
-
-  handleIncrement() {
+  handleIncrement = () => {
     this.setState((currState) => {
       return { count: currState.count + 1 };
     });
   }
 
-  handleDecrement() {
+  handleDecrement = () => {
     this.setState((currState) => {
       return { count: currState.count - 1 };
     });
