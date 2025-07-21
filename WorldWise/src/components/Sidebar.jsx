@@ -7,7 +7,7 @@ function Sidebar() {
   return (
     <div className={styles.sidebar}>
       <Logo />
-      <AppNav />
+      <AppNav />  
 
      <Outlet />
       <footer className={styles.footer}>
