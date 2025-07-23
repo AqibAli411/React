@@ -1,29 +1,59 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import styles from "./Map.module.css";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMap,
+  useMapEvent,
+} from "react-leaflet";
 import { useEffect, useState } from "react";
 import { useCiy } from "./CityContext";
-import { map } from "leaflet";
+import { useGeolocation } from "../../hooks/useGeoLocation";
+import Button from "./Button";
+import { useUrlPosition } from "../../hooks/useUrlPosition";
+
+
+//to create a logic that doesn't exist there in the leaflet component
+//create a componenet that returns null (if only concerend with logic)
+//implement and use it inside the MapContainer
 
 function Map() {
   //when i click on a particular country in the side bar, map should move to it.
   //precisely, update mapPositon acc to searchParams..
   const [mapPosition, setMapPosition] = useState([31.582045, -9]);
-  const navigate = useNavigate();
   const { cities } = useCiy();
-  const [searchParams] = useSearchParams();
-  const lat = searchParams.get("lat");
-  const lng = searchParams.get("lng");
+  const {
+    isLoading: isLoadingGeo,
+    position: geoLocation,
+    getPosition,
+  } = useGeolocation();
+  const [lat,lng] = useUrlPosition();
 
+  //to sync with geo location
   useEffect(
     function () {
-      if(lat && lng) setMapPosition([lat, lng]);
+      if (geoLocation) setMapPosition([geoLocation.lat, geoLocation.lng]);
+    },
+    [geoLocation]
+  );
+
+  //to sync lat and lng with map positions
+  useEffect(
+    function () {
+      if (lat && lng) setMapPosition([lat, lng]);
     },
     [lat, lng]
   );
 
   return (
     <div className={styles.mapContainer}>
+      {!geoLocation && (
+        <Button type="position" onClick={getPosition}>
+          {isLoadingGeo ? "Loading..." : "Use your Location"}
+        </Button>
+      )}
       <MapContainer
         center={mapPosition}
         zoom={6}
@@ -44,7 +74,16 @@ function Map() {
             </Popup>
           </Marker>
         ))}
+        {geoLocation && <Marker
+          position={[geoLocation.lat,geoLocation.lng]}
+        >
+          <Popup>
+            <span>Your location</span>
+          </Popup>
+        </Marker>}
+
         <CenterMap mapPosition={mapPosition} />
+        <Clicked />
       </MapContainer>
     </div>
   );
@@ -54,6 +93,15 @@ function Map() {
 function CenterMap({ mapPosition }) {
   const map = useMap();
   map.setView(mapPosition);
+  return null;
+}
+
+function Clicked() {
+  const navigate = useNavigate();
+
+  useMapEvent({
+    click: (e) => navigate(`form?lat=${e.latlng.lat}&lng=${e.latlng.lng}`),
+  });
   return null;
 }
 

@@ -7,8 +7,8 @@
       "date": "2027-10-31T15:59:59.138Z",
       "notes": "My favorite city so far!",
       "position": {
-        "lat": 38.7223,
-        "lng": 9.1393
+        "lat": 38.727881642324164,
+        "lng": -9.140900099907554
       },
       "id": 73930385
     },
@@ -37,17 +37,16 @@
       "id": 98443197
     },
     {
-      "cityName": "Lahore",
+      "cityName": "Dera Ghazi Khan",
       "country": "Pakistan",
       "emoji": "🇵🇰",
-      "date": "2024-07-15T08:22:53.976Z",
-      "notes": "",
+      "date": "2025-07-22T19:40:26.935Z",
+      "notes": "londa baaz",
       "position": {
-       
-        "lat": 31.582045,
-        "lng": 74.329376
+        "lat": "30.050076521698735",
+        "lng": "70.85632324218751"
       },
-      "id": 42342352
+      "id": 98443199
     }
   ]
 }

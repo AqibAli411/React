@@ -8,8 +8,8 @@ function CityList() {
   const { isLoading, cities } = useCiy();
 
   if (isLoading) return <Spinner />;
-
-  if (!cities.length)
+   
+  if (!cities)
     return (
       <Message message="you haven't selected any country, click on the map to make a selection!" />
     );
