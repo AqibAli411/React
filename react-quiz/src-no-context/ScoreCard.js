@@ -1,8 +1,4 @@
-import { useQuiz } from "./QuizContext";
-
-function ScoreCard() {
-  const { score, dispatch, highScore } = useQuiz();
-
+function ScoreCard({ score, dispatch, highScore }) {
   function handleReset() {
     dispatch({ type: "resetQuiz" });
   }

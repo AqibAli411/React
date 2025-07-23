@@ -1,9 +1,6 @@
 import { useEffect } from "react";
-import { useQuiz } from "./QuizContext";
 
-function Footer() {
-  const { time, selectedOpt, dispatch, score, selectedId } = useQuiz();
-
+function Footer({ time, selectedOpt, dispatch, score, selectedId }) {
   useEffect(
     function () {
       if (time <= 0) {

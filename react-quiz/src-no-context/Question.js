@@ -1,18 +1,14 @@
-import { useQuiz } from "./QuizContext";
-
-function Question() {
-  const { question, selectedId, dispatch, score, selectedOpt } = useQuiz();
-
+function Question({ question, num, dispatch, score, selectedOpt }) {
   return (
     <>
       <header className="progress">
         <progress
           max="15"
-          value={selectedId + Number(selectedOpt !== null)}
+          value={num + Number(selectedOpt !== null)}
         ></progress>
         <p>
           Question
-          <strong> {selectedId + 1}</strong>
+          <strong> {num + 1}</strong>
         </p>
         <p>
           <strong>{score}</strong>/ 280
@@ -23,7 +19,7 @@ function Question() {
         <div className="options">
           {Array.from({ length: 4 }, (_, i) => (
             <Button
-              handelOptions={() => dispatch({ type: "setOpt", payload: i })}
+              handelOptions={() => dispatch({ type: "setOpt",payload:i })}
               key={i}
               isAnswer={selectedOpt === i}
               isCorrect={i === question.correctOption}
