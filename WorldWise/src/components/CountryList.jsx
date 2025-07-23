@@ -1,10 +1,10 @@
 import styles from "./CountryList.module.css";
 import CountryItem from "./CountryItem";
 import Spinner from "./Spinner";
-import { useCiy } from "./CityContext";
+import { useCity } from "../../Contexts/CityContext";
 
 function CountryList() {
-  const {isLoading,cities} = useCiy();
+  const { isLoading, cities } = useCity();
 
   if (isLoading) return <Spinner />;
 

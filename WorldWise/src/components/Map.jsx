@@ -9,10 +9,11 @@ import {
   useMapEvent,
 } from "react-leaflet";
 import { useEffect, useState } from "react";
-import { useCiy } from "./CityContext";
+import { useCity } from "../../Contexts/CityContext";
 import { useGeolocation } from "../../hooks/useGeoLocation";
-import Button from "./Button";
 import { useUrlPosition } from "../../hooks/useUrlPosition";
+import Button from "./Button";
+import User from "./User";
 
 
 //to create a logic that doesn't exist there in the leaflet component
@@ -23,7 +24,7 @@ function Map() {
   //when i click on a particular country in the side bar, map should move to it.
   //precisely, update mapPositon acc to searchParams..
   const [mapPosition, setMapPosition] = useState([31.582045, -9]);
-  const { cities } = useCiy();
+  const { cities } = useCity();
   const {
     isLoading: isLoadingGeo,
     position: geoLocation,
@@ -54,6 +55,7 @@ function Map() {
           {isLoadingGeo ? "Loading..." : "Use your Location"}
         </Button>
       )}
+      <User />
       <MapContainer
         center={mapPosition}
         zoom={6}

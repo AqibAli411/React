@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import styles from "./CityItem.module.css";
-import { useCiy } from "./CityContext";
+import { useCity } from "../../Contexts/CityContext";
 
 const formatDate = (date) =>
   new Intl.DateTimeFormat("en", {
@@ -10,7 +10,7 @@ const formatDate = (date) =>
   }).format(new Date(date));
 
 function CityItem({ city }) {
-  const { currCity, deleteCity } = useCiy();
+  const { currCity, deleteCity } = useCity();
   const { cityName, emoji, date, id, position } = city;
 
   //how here i know, which city is selected

@@ -3,7 +3,7 @@ import styles from "./City.module.css";
 import Button from "./Button";
 import Spinner from "./Spinner";
 import { useEffect } from "react";
-import { useCiy } from "./CityContext";
+import { useCity } from "../../Contexts/CityContext";
 
 const formatDate = (date) =>
   new Intl.DateTimeFormat("en", {
@@ -15,7 +15,7 @@ const formatDate = (date) =>
 
 function City() {
   //value returned from useParam hook is indeed a string
-  const { currCity, getCity, isLoading } = useCiy();
+  const { currCity, getCity, isLoading } = useCity();
   const { id } = useParams();
   const navigate = useNavigate();
 

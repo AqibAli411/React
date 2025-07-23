@@ -47,6 +47,18 @@
         "lng": "70.85632324218751"
       },
       "id": 98443199
+    },
+    {
+      "cityName": "Saulge",
+      "country": "France",
+      "emoji": "🇫🇷",
+      "date": "2025-07-23T09:46:57.613Z",
+      "notes": "saulge is the best country..",
+      "position": {
+        "lat": "46.306001260684376",
+        "lng": "0.8953410058593783"
+      },
+      "id": 98443200
     }
   ]
 }

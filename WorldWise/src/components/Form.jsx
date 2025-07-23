@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUrlPosition } from "../../hooks/useUrlPosition";
-import { useCiy } from "./CityContext";
+import { useCity } from "../../Contexts/CityContext";
 
 import Button from "./Button";
 import styles from "./Form.module.css";
@@ -30,7 +30,7 @@ function Form() {
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
   const [emoji, setEmoji] = useState("");
-  const { createCity, isLoading: isLoadingForAdd } = useCiy();
+  const { createCity, isLoading: isLoadingForAdd } = useCity();
   const navigate = useNavigate();
   const [lat, lng] = useUrlPosition();
 
