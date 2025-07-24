@@ -1,6 +1,6 @@
 // useCiy -> custom hook
 // CityProvider() => component
-import { useContext, useReducer } from "react";
+import { useCallback, useContext, useReducer } from "react";
 import { createContext, useEffect } from "react";
 
 const CityContext = createContext();
@@ -68,18 +68,24 @@ function CityProvider({ children }) {
     fetchCities();
   }, []);
 
-  async function getCity(id) {
-    if(Number(id) === currCity) return;
+  //memoization to prevent infinte loop caused by useEffect present where getCity is called
+  //on each re-render this method would be generated again (as a new function each time)
+  //therefore trigerring the useEffect
+  const getCity = useCallback(
+    async (id) => {
+      if (Number(id) === currCity.id) return;
 
-    try {
-      dispatch({ type: "loading" });
-      const res = await fetch(`${BASE_URL}/cities/${id}`);
-      const data = await res.json();
-      dispatch({ type: "city/loaded", payload: data });
-    } catch {
-      dispatch({ type: "rejected", payload: "failed to get city" });
-    }
-  }
+      try {
+        dispatch({ type: "loading" });
+        const res = await fetch(`${BASE_URL}/cities/${id}`);
+        const data = await res.json();
+        dispatch({ type: "city/loaded", payload: data });
+      } catch {
+        dispatch({ type: "rejected", payload: "failed to get city" });
+      }
+    },
+    [currCity.id]
+  );
 
   async function createCity(newCity) {
     try {
