@@ -53,13 +53,13 @@ function App() {
   //but it updates the state so component must re-render
   //seeing the profile, it seems app is getting rendered each second(confirms our asumm)
 
-  useEffect(function () {
-    const id = setInterval(function () {
-      setTime(formatTime(new Date()));
-    }, 1000);
+  // useEffect(function () {
+  //   const id = setInterval(function () {
+  //     setTime(formatTime(new Date()));
+  //   }, 1000);
 
-    return () => clearInterval(id);
-  }, []);
+  //   return () => clearInterval(id);
+  // }, []);
 
   return (
     <main>

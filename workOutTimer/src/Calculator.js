@@ -19,11 +19,15 @@ const Calculator = memo(function Calculator({ workouts, allowSound }) {
   const mins = Math.floor(duration);
   const seconds = (duration - mins) * 60;
 
-  const playSound = function () {
-    if (!allowSound) return;
-    const sound = new Audio(clickSound);
-    sound.play();
-  };
+
+  useEffect(
+    function () {
+      if (!allowSound) return;
+      const sound = new Audio(clickSound);
+      sound.play();
+    },
+    [allowSound,duration]
+  );
 
   return (
     <>
