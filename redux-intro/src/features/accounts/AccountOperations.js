@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { deposit, payLoan, requestLoan, withdraw } from "./AccountSlice";
+import {
+  deposit,
+  payLoan,
+  requestLoan,
+  withdraw,
+} from "./AccountSlice";
 
 function AccountOperations() {
   const [depositAmount, setDepositAmount] = useState("");
@@ -19,9 +24,12 @@ function AccountOperations() {
     if (!depositAmount) return;
 
     //the deposit method will either return a value or a functin
-    //when it returns a function redux knows to execute it by passing the dispatch 
+    //when it returns a function redux knows to execute it by passing the dispatch
     //and the current state and letting it dispatch the action whenever async process ends
-    dispatch(deposit(depositAmount, currency));
+    // dispatch(deposit(depositAmount, currency));
+    // dispatch(deposit(depositAmount));
+    dispatch(deposit({depositAmount,currency}));
+
     setCurrency("USD");
     setDepositAmount("");
   }
