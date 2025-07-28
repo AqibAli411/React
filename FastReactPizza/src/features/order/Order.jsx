@@ -1,6 +1,7 @@
 // Test ID: IIDSAT
 
-import { useSearchParams } from "react-router-dom";
+import { useLoaderData } from "react-router-dom";
+import { getOrder } from "../../services/apiRestaurant";
 import {
   calcMinutesLeft,
   formatCurrency,
@@ -43,6 +44,9 @@ const order = {
 };
 
 function Order() {
+  
+  const order = useLoaderData();
+
   // Everyone can search for all orders, so for privacy reasons we're gonna gonna exclude names or address, these are only for the restaurant staff
   const {
     id,
@@ -55,8 +59,6 @@ function Order() {
   } = order;
   const deliveryIn = calcMinutesLeft(estimatedDelivery);
 
-  const [searchParams,setSearchParams] = useSearchParams();
-  console.log();
 
   return (
     <div>
@@ -85,6 +87,12 @@ function Order() {
       </div>
     </div>
   );
+}
+
+//can be placed directly but kinda convention to place it here...
+export async function loader({ params }) {
+  const order = await getOrder(params.orderId);
+  return order;
 }
 
 export default Order;

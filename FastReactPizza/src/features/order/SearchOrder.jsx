@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getOrder } from "../../services/apiRestaurant";
 
 function SearchOrder() {
   const [query, setQuery] = useState("");
@@ -24,5 +25,7 @@ function SearchOrder() {
     </form>
   );
 }
+
+
 
 export default SearchOrder;
