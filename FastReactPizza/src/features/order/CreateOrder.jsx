@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form } from "react-router-dom";
+import { Form, redirect, useActionData, useNavigation } from "react-router-dom";
 import { createOrder } from "../../services/apiRestaurant";
 
 // https://uibakery.io/regex-library/phone-number
@@ -32,9 +32,18 @@ const fakeCart = [
   },
 ];
 
+//using Form instead of form
+//action -> a function runs when form is submitted..
+//returns a response object
+
 function CreateOrder() {
   // const [withPriority, setWithPriority] = useState(false);
   const cart = fakeCart;
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+
+  const formErrors = useActionData();
+
 
   return (
     <div>
@@ -52,6 +61,7 @@ function CreateOrder() {
           <div>
             <input type="tel" name="phone" required />
           </div>
+          {formErrors?.phone && <p> {formErrors.phone} </p>}
         </div>
 
         <div>
@@ -74,28 +84,39 @@ function CreateOrder() {
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
-          <button>Order now</button>
+          <button disabled={isSubmitting}>
+            {isSubmitting ? "Packing Order..." : "Order now"}{" "}
+          </button>
         </div>
       </Form>
     </div>
   );
 }
 
+//we cannot call hooks inside the normal functions only inside components
 export async function action({ request }) {
   const formData = await request.formData();
   const data = Object.fromEntries(formData);
 
+  //conveted "json cart" to array
   const order = {
     ...data,
     cart: JSON.parse(data.cart),
     priority: data.priority === "on",
   };
 
-  createOrder(order);
+  const errors = {};
+  if (!isValidPhone(order.phone))
+    errors.phone =
+      "Please provide a correct phone number. We might need it to contact you!";
 
-  console.log(data);
+  if (Object.keys(errors).length > 0) return errors;
 
-  return null;
+  //get the new order to redirect user to that new order
+  const newOrder = await createOrder(order);
+
+  //function takes url where current page would be redirected to and returns response.
+  return redirect(`/order/${newOrder.id}`);
 }
 
 export default CreateOrder;
