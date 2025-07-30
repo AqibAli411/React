@@ -5,6 +5,7 @@ const initialState = {
   currMessage: "",
   messages: [],
   username: "User" + Math.floor(Math.random() * 1000),
+  isJoined: false,
 };
 
 function reducer(state, action) {
@@ -21,6 +22,11 @@ function reducer(state, action) {
         ...state,
         currMessage: "",
       };
+    case "user/joined":
+      return {
+        ...state,
+        isJoined: true,
+      };
     case "username/change":
       return { ...state, username: action.payload };
     default:
@@ -29,7 +35,7 @@ function reducer(state, action) {
 }
 
 function App() {
-  const [{ messages, currMessage, username }, dispatch] = useReducer(
+  const [{ messages, currMessage, username, isJoined }, dispatch] = useReducer(
     reducer,
     initialState
   );
@@ -81,6 +87,8 @@ function App() {
   };
 
   const joinChat = () => {
+    dispatch({ type: "user/joined" });
+
     if (connected && client) {
       const joinPayload = {
         sender: username,
@@ -153,10 +161,10 @@ function App() {
           }
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
-          disabled={!connected}
+          disabled={!isJoined || !connected}
           style={{ flex: 1, padding: "5px" }}
         />
-        <button onClick={sendMessage} disabled={!connected}>
+        <button onClick={sendMessage} disabled={!isJoined || !connected}>
           Send
         </button>
       </div>
