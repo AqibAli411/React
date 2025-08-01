@@ -18,6 +18,7 @@ function SearchOrder() {
   return (
     <form onSubmit={handleSubmit}>
       <input
+        className="bg-white"
         placeholder="Enter an order..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}

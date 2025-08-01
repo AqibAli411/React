@@ -42,6 +42,7 @@ function CreateOrder() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  //to get the form data in the component (used normally for errors)
   const formErrors = useActionData();
 
 
@@ -85,7 +86,7 @@ function CreateOrder() {
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
           <button disabled={isSubmitting}>
-            {isSubmitting ? "Packing Order..." : "Order now"}{" "}
+            {isSubmitting ? "Packing Order..." : "Order now"}
           </button>
         </div>
       </Form>
@@ -94,13 +95,15 @@ function CreateOrder() {
 }
 
 //we cannot call hooks inside the normal functions only inside components
+//request -> contains the form submitted data
 export async function action({ request }) {
   const formData = await request.formData();
+  //convert map -> object
   const data = Object.fromEntries(formData);
 
-  //conveted "json cart" to array
   const order = {
     ...data,
+    //conveted "json cart" to array
     cart: JSON.parse(data.cart),
     priority: data.priority === "on",
   };
@@ -110,6 +113,7 @@ export async function action({ request }) {
     errors.phone =
       "Please provide a correct phone number. We might need it to contact you!";
 
+  //checking if object has some errors in it
   if (Object.keys(errors).length > 0) return errors;
 
   //get the new order to redirect user to that new order
