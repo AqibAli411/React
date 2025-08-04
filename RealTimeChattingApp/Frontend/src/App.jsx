@@ -8,6 +8,7 @@ const initialState = {
   isJoined: false,
 };
 
+//main state
 function reducer(state, action) {
   switch (action.type) {
     case "message/typing":
@@ -59,6 +60,7 @@ function App() {
 
   const { client, connected } = useWebSocket(topics, onMessage);
 
+  //send message function to call when sending message
   const sendMessage = () => {
     if (connected && client && currMessage.trim()) {
       const messagePayload = {
@@ -107,7 +109,6 @@ function App() {
       sendMessage();
     }
   };
-
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
       <h1>Real-Time Chat</h1>
