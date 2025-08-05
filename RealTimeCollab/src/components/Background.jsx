@@ -1,7 +1,9 @@
-function Background() {
+function Background({ children }) {
   return (
-    <div className=" relative h-[75%] text-white">
-      <div className="absolute inset-0 mx-auto h-full w-[95%] rounded-sm bg-[radial-gradient(theme('colors.stone.300')_1.5px,transparent_1px)] [background-size:8px_8px]"></div>
+    <div className="mx-auto h-[85vh] max-w-330 relative">
+      <div className="dotted-background flex h-full w-full flex-col items-center justify-center gap-4 rounded-4xl">
+        {children}
+      </div>
     </div>
   );
 }

@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
-
-
 html,
 body {
   width: 100%;
   height: 100%;
+  font-family: 'Montserrat';
 }
 
 #root {
@@ -18,8 +17,36 @@ body {
     border: 2px solid transparent;
     background-image:
       linear-gradient(white, white),
-      linear-gradient(to bottom right, #c4c2c2 10%, #e0e0e0, #c4c2c2);
+      linear-gradient(
+        to bottom right,
+        theme("color.stone.300"),
+        theme("color.stone.200"),
+        theme("color.stone.300")
+      );
     background-origin: border-box;
-    background-clip:   padding-box, border-box;
+    background-clip: padding-box, border-box;
+  }
+}
+
+@layer utilities {
+  .dotted-background {
+    border: 2.2px solid transparent;
+    background-image:
+      radial-gradient(theme("color.zinc.200") 1.5px, transparent 0px),
+      radial-gradient(theme("color.zinc.200") 1.5px, transparent 0px),
+      linear-gradient(white, white),
+      linear-gradient(
+        to bottom right,
+        theme("color.stone.300"),
+        theme("color.stone.200"),
+        theme("color.stone.300")
+      );
+
+    background-clip: padding-box, padding-box, padding-box, border-box;
+    background-origin: border-box;
+    background-size: 8px 8px;
+    background-position:
+      0 0,
+      12px 12px;
   }
 }
