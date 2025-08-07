@@ -6,8 +6,10 @@ import Links from "./Links";
 function Header() {
   return (
     <header className="mx-auto my-2 flex max-w-320 items-center justify-between p-2 text-stone-950">
-      <div className="flex gap-0.75">
-        <div>Logo</div>
+      <div className="flex gap-2 items-center justify-center">
+        <div className="w-10 h-10 bg-blue-500 p-1 rounded-xl">
+          <img src="/icon.svg"/>
+        </div>
         <div className="font-semibold">RealScribe</div>
       </div>
       

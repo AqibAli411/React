@@ -1,8 +1,10 @@
 function Background({ children }) {
   return (
-    <div className="mx-auto h-[85vh] max-w-330 relative">
-      <div className="dotted-background flex h-full w-full flex-col items-center justify-center gap-4 rounded-4xl">
-        {children}
+    <div className="relative mx-auto h-135 max-w-330">
+      <div className="dotted-background h-full w-full items-center justify-center gap-4 rounded-4xl">
+        <div className="flex h-full w-full items-center justify-center gap-9">
+          {children}
+        </div>
       </div>
     </div>
   );

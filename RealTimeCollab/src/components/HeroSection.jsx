@@ -2,15 +2,15 @@ import Heading from "./Heading";
 
 function HeroSection() {
   return (
-    <section className="flex flex-col items-center justify-center gap-10 text-stone-950">
-      <div className="h-[150px] w-[150px] bg-blue-500 mask-[url('/connection.svg')] mask-contain mask-center mask-no-repeat" />
-
+    <section className="flex flex-1 flex-col items-start justify-center gap-6 ps-6 text-stone-950">
       <Heading />
       <div className="">
-        <p>Efficiently manage your tasks and boost productivity</p>
+        <p>
+          Real-time co-editing that turns solo drafts into team masterpieces.
+        </p>
       </div>
-      <div className="rounded-md bg-blue-500 px-4 py-2 font-medium text-stone-100">
-        <a>Get free demo</a>
+      <div className="gradient-border ml-[-26px] self-center rounded-xl px-4 py-2 font-medium">
+        <a>Join Now</a>
       </div>
     </section>
   );
