@@ -26,7 +26,9 @@ function useWebSocket(onDraw, onStop) {
         setConnected(true);
 
         //For each topic, call the subscribe with given onDraw method
-        client.subscribe("/topic/draw/start", (message) => onDraw(message));
+        client.subscribe("/topic/draw/start", (message) =>
+          onDraw(message)
+        );
 
         //For each topic, call the subscribe with given onStop method
         client.subscribe("/topic/draw/stop", (message) => onStop(message));

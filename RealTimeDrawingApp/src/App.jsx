@@ -1,8 +1,8 @@
-import DrawingBoard from "./DrawingBoard";
+import CanvasManager from "./CanvasManager";
 
 function App() {
   
-  return <DrawingBoard />;
+  return <CanvasManager />;
 }
 
 export default App;
