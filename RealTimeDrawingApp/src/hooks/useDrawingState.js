@@ -3,8 +3,7 @@ import { useRef, useCallback } from "react";
 
 export function useDrawingState() {
   const isDrawing = useRef(false);
-//   const [currentTool, setCurrentTool] = useState("pen"); // 'pen', 'eraser', 'pan'
-    const currentToolRef = useRef("pen");
+  const currentToolRef = useRef("pen");
 
   // Multi-user stroke management
   const myStroke = useRef([]);
@@ -20,7 +19,7 @@ export function useDrawingState() {
   const startNewStroke = useCallback((point) => {
     isDrawing.current = true;
     //a sort of variable that we can use to generate a random number each time
-    strokeId.current += 1;  //starting with 1
+    strokeId.current += 1; //starting with 1
     currentStrokeId.current = strokeId.current;
     myUserId.current = Number(strokeId.current);
 
@@ -64,7 +63,7 @@ export function useDrawingState() {
     return strokeData;
   }, []);
 
-  //this adds all data we have {points,id} 
+  //this adds all data we have {points,id}
   const addCompletedStroke = useCallback((strokeWithMetadata) => {
     completedStrokes.current.push(strokeWithMetadata);
   }, []);

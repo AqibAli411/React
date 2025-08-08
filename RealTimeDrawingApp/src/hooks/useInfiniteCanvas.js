@@ -1,19 +1,20 @@
 // hooks/useInfiniteCanvas.js
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback } from "react";
 
 export function useInfiniteCanvas(canvasRef) {
-  const [viewport, setViewport] = useState({
+  const viewportRef = useRef({
     x: 0,
     y: 0,
     zoom: 1,
   });
 
-  const [transform, setTransform] = useState({
+  const transformRef = useRef({
     x: 0,
     y: 0,
     scale: 1,
   });
 
+  //ref here
   const isPanning = useRef(false);
   const lastPanPoint = useRef(null);
   const panStartPoint = useRef(null);
@@ -33,31 +34,32 @@ export function useInfiniteCanvas(canvasRef) {
       const screenY = (e.clientY - rect.top) * scaleY;
 
       // Convert to canvas coordinates accounting for transform
-      const canvasX = (screenX - transform.x) / transform.scale;
-      const canvasY = (screenY - transform.y) / transform.scale;
+      const canvasX =
+        (screenX - transformRef.current.x) / transformRef.current.scale;
+      const canvasY =
+        (screenY - transformRef.current.y) / transformRef.current.scale;
 
       return [canvasX, canvasY, e.pressure || 0.5];
     },
-    [transform, canvasRef]
+    [canvasRef]
   );
 
   // Convert canvas coordinates to screen coordinates
-  const getScreenPoint = useCallback(
-    (canvasX, canvasY) => {
-      const screenX = canvasX * transform.scale + transform.x;
-      const screenY = canvasY * transform.scale + transform.y;
-      return [screenX, screenY];
-    },
-    [transform]
-  );
+  const getScreenPoint = useCallback((canvasX, canvasY) => {
+    const screenX =
+      canvasX * transformRef.current.scale + transformRef.current.x;
+    const screenY =
+      canvasY * transformRef.current.scale + transformRef.current.y;
+    return [screenX, screenY];
+  }, []);
 
   const updateTransform = useCallback((newTransform) => {
-    setTransform(newTransform);
-    setViewport({
+    transformRef.current = newTransform;
+    viewportRef.current = {
       x: -newTransform.x / newTransform.scale,
       y: -newTransform.y / newTransform.scale,
       zoom: newTransform.scale,
-    });
+    };
   }, []);
 
   const startPan = useCallback(
@@ -86,9 +88,9 @@ export function useInfiniteCanvas(canvasRef) {
       const deltaY = e.clientY - lastPanPoint.current.y;
 
       const newTransform = {
-        ...transform,
-        x: transform.x + deltaX,
-        y: transform.y + deltaY,
+        ...transformRef.current,
+        x: transformRef.current.x + deltaX,
+        y: transformRef.current.y + deltaY,
       };
 
       updateTransform(newTransform);
@@ -98,7 +100,7 @@ export function useInfiniteCanvas(canvasRef) {
         y: e.clientY,
       };
     },
-    [transform, updateTransform]
+    [updateTransform]
   );
 
   const stopPan = useCallback(() => {
@@ -110,15 +112,21 @@ export function useInfiniteCanvas(canvasRef) {
   const zoomIn = useCallback(
     (centerPoint) => {
       const zoomFactor = 1.2;
-      const newScale = Math.min(transform.scale * zoomFactor, 5); // Max zoom 5x
+      const newScale = Math.min(transformRef.current.scale * zoomFactor, 5); // Max zoom 5x
 
-      let newX = transform.x;
-      let newY = transform.y;
+      let newX = transformRef.current.x;
+      let newY = transformRef.current.y;
 
       if (centerPoint) {
         const [centerX, centerY] = centerPoint;
-        newX = centerX - (centerX - transform.x) * (newScale / transform.scale);
-        newY = centerY - (centerY - transform.y) * (newScale / transform.scale);
+        newX =
+          centerX -
+          (centerX - transformRef.current.x) *
+            (newScale / transformRef.current.scale);
+        newY =
+          centerY -
+          (centerY - transformRef.current.y) *
+            (newScale / transformRef.current.scale);
       }
 
       updateTransform({
@@ -127,21 +135,27 @@ export function useInfiniteCanvas(canvasRef) {
         scale: newScale,
       });
     },
-    [transform, updateTransform]
+    [updateTransform]
   );
 
   const zoomOut = useCallback(
     (centerPoint) => {
       const zoomFactor = 1 / 1.2;
-      const newScale = Math.max(transform.scale * zoomFactor, 0.1); // Min zoom 0.1x
+      const newScale = Math.max(transformRef.current.scale * zoomFactor, 0.1); // Min zoom 0.1x
 
-      let newX = transform.x;
-      let newY = transform.y;
+      let newX = transformRef.current.x;
+      let newY = transformRef.current.y;
 
       if (centerPoint) {
         const [centerX, centerY] = centerPoint;
-        newX = centerX - (centerX - transform.x) * (newScale / transform.scale);
-        newY = centerY - (centerY - transform.y) * (newScale / transform.scale);
+        newX =
+          centerX -
+          (centerX - transformRef.current.x) *
+            (newScale / transformRef.current.scale);
+        newY =
+          centerY -
+          (centerY - transformRef.current.y) *
+            (newScale / transformRef.current.scale);
       }
 
       updateTransform({
@@ -150,7 +164,7 @@ export function useInfiniteCanvas(canvasRef) {
         scale: newScale,
       });
     },
-    [transform, updateTransform]
+    [updateTransform]
   );
 
   const resetView = useCallback(() => {
@@ -165,13 +179,19 @@ export function useInfiniteCanvas(canvasRef) {
     (zoom, centerPoint) => {
       const newScale = Math.max(0.1, Math.min(5, zoom));
 
-      let newX = transform.x;
-      let newY = transform.y;
+      let newX = transformRef.current.x;
+      let newY = transformRef.current.y;
 
       if (centerPoint) {
         const [centerX, centerY] = centerPoint;
-        newX = centerX - (centerX - transform.x) * (newScale / transform.scale);
-        newY = centerY - (centerY - transform.y) * (newScale / transform.scale);
+        newX =
+          centerX -
+          (centerX - transformRef.current.x) *
+            (newScale / transformRef.current.scale);
+        newY =
+          centerY -
+          (centerY - transformRef.current.y) *
+            (newScale / transformRef.current.scale);
       }
 
       updateTransform({
@@ -180,7 +200,7 @@ export function useInfiniteCanvas(canvasRef) {
         scale: newScale,
       });
     },
-    [transform, updateTransform]
+    [updateTransform]
   );
 
   // Check if a point is visible in the current viewport
@@ -202,8 +222,8 @@ export function useInfiniteCanvas(canvasRef) {
   );
 
   return {
-    viewport,
-    transform,
+    viewportRef,
+    transformRef,
     isPanning,
     startPan,
     continuePan,

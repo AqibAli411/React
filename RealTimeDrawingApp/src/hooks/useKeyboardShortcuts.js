@@ -1,15 +1,18 @@
 // hooks/useKeyboardShortcuts.js
 import { useEffect, useCallback } from "react";
 
+
 export function useKeyboardShortcuts({
-  onUndo,
+  client,
+  canUndo,
   onRedo,
-  onToggleEraser,
+  currentToolRef,
+  isPanning,
   onResetView,
   onZoomIn,
   onZoomOut,
   onSelectPen,
-  onTogglePan,
+  isDownPressed,
 }) {
   const handleKeyDown = useCallback(
     (e) => {
@@ -24,7 +27,14 @@ export function useKeyboardShortcuts({
       // Ctrl/Cmd + Z - Undo
       if (ctrlOrCmd && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
-        onUndo?.();
+        //as user enters "ctrl + z" it should go back for ever user
+        //we will publish here -> subscribe method -> call undo method
+        client.publish({
+          destination: "/app/undo",
+          body: JSON.stringify({
+            canUndo,
+          }),
+        });
         return;
       }
 
@@ -38,7 +48,10 @@ export function useKeyboardShortcuts({
       // E - Toggle eraser
       if (e.key === "e" || e.key === "E") {
         e.preventDefault();
-        onToggleEraser?.();
+
+        currentToolRef.current =
+          currentToolRef.current === "eraser" ? "pen" : "eraser";
+        console.log(currentToolRef.current);
         return;
       }
 
@@ -52,9 +65,9 @@ export function useKeyboardShortcuts({
       // Space - Pan mode (hold)
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
-        onTogglePan?.(true);
+        if (!isDownPressed.current) isPanning.current = true;
         return;
-      }
+      } 
 
       // Ctrl/Cmd + 0 - Reset view
       if (ctrlOrCmd && e.key === "0") {
@@ -77,37 +90,39 @@ export function useKeyboardShortcuts({
         return;
       }
 
-    //   // Numbers 1-9 for zoom levels
-    //   if (!ctrlOrCmd && /^[1-9]$/.test(e.key)) {
-    //     e.preventDefault();
-    //     const zoomLevel = parseInt(e.key) * 0.2; // 1=20%, 2=40%, etc., 5=100%
-    //     onZoomTo?.(zoomLevel);
-    //     return;
-    //   }
+      //   // Numbers 1-9 for zoom levels
+      //   if (!ctrlOrCmd && /^[1-9]$/.test(e.key)) {
+      //     e.preventDefault();
+      //     const zoomLevel = parseInt(e.key) * 0.2; // 1=20%, 2=40%, etc., 5=100%
+      //     onZoomTo?.(zoomLevel);
+      //     return;
+      //   }
 
-    //   // Escape - Cancel current action
-    //   if (e.key === "Escape") {
-    //     e.preventDefault();
-    //     onEscape?.();
-    //     return;
-    //   }
+      //   // Escape - Cancel current action
+      //   if (e.key === "Escape") {
+      //     e.preventDefault();
+      //     onEscape?.();
+      //     return;
+      //   }
 
-    //   // Delete/Backspace - Delete selected (if any)
-    //   if (e.key === "Delete" || e.key === "Backspace") {
-    //     e.preventDefault();
-    //     onDelete?.();
-    //     return;
-    //   }
+      //   // Delete/Backspace - Delete selected (if any)
+      //   if (e.key === "Delete" || e.key === "Backspace") {
+      //     e.preventDefault();
+      //     onDelete?.();
+      //     return;
+      //   }
     },
     [
-      onUndo,
       onRedo,
-      onToggleEraser,
       onResetView,
       onZoomIn,
       onZoomOut,
       onSelectPen,
-      onTogglePan,
+      canUndo,
+      client,
+      currentToolRef,
+      isPanning,
+      isDownPressed,
     ]
   );
 
@@ -116,11 +131,11 @@ export function useKeyboardShortcuts({
       // Space - Stop pan mode
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
-        onTogglePan?.(false);
+        isPanning.current = false;
         return;
       }
     },
-    [onTogglePan]
+    [isPanning]
   );
 
   useEffect(() => {

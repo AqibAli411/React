@@ -1,5 +1,4 @@
-// CanvasManager.jsx - Main orchestrator component
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import useWebSocket from "./useWebSocket";
 import { useDrawingState } from "./hooks/useDrawingState";
 import { useCanvasRenderer } from "./hooks/useCanvasRenderer";
@@ -9,12 +8,13 @@ import { useInfiniteCanvas } from "./hooks/useInfiniteCanvas";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { STROKE_OPTIONS } from "./utils/drawingUtils";
 import Toolbar from "./components/Toolbar";
+import CanvasDraw from "./CanvasDraw";
 
 export default function CanvasManager() {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const isMounted = useRef(false);
-
+  const isDownPressed = useRef(false);
   // Initialize drawing state management
   const {
     isDrawing,
@@ -41,8 +41,8 @@ export default function CanvasManager() {
 
   // Initialize infinite canvas
   const {
-    viewport,
-    transform,
+    viewportRef,
+    transformRef,
     isPanning,
     startPan,
     continuePan,
@@ -60,13 +60,24 @@ export default function CanvasManager() {
     myStroke,
     isDrawing,
     currentTool: currentToolRef.current,
-    viewport,
-    transform,
+    viewportRef,
+    transformRef,
   });
 
   // Initialize undo/redo system
   const { undo, redo, canUndo, canRedo, addToHistory, clearHistory } =
     useUndoRedo(completedStrokes, scheduleRedraw);
+
+  const subUndo = useCallback(
+    (message) => {
+      if (!isMounted.current) return;
+
+      const { canUndo } = JSON.parse(message.body);
+      console.log("undo", canUndo);
+      if (canUndo) undo();
+    },
+    [undo]
+  );
 
   // WebSocket message handlers
   const onDraw = useCallback(
@@ -147,15 +158,17 @@ export default function CanvasManager() {
     [scheduleRedraw, liveStrokes, myUserId, addCompletedStroke, addToHistory]
   );
 
-  const { client } = useWebSocket(onDraw, onStop);
+  const { client } = useWebSocket(onDraw, onStop, subUndo);
 
   // Set mounted flag
   useEffect(() => {
     isMounted.current = true;
+    //marking this
+    scheduleRedraw();
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [scheduleRedraw]);
 
   // Canvas setup
   useEffect(() => {
@@ -191,31 +204,30 @@ export default function CanvasManager() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onUndo: () => {
-      if (canUndo) {
-        undo();
-        scheduleRedraw();
-      }
-    },
+    canUndo,
+    client,
     onRedo: () => {
       if (canRedo) {
         redo();
         scheduleRedraw();
       }
     },
-    onToggleEraser: () =>
-      currentToolRef.current === "eraser" ? "pen" : "eraser",
+    currentToolRef,
     onResetView: resetView,
+    isPanning,
+    isDownPressed,
   });
 
   // Event handlers
   const handlePointerDown = useCallback(
     (e) => {
+      if (e.button === 2) return;
       if (!client) return;
+      isDownPressed.current = true;
       e.preventDefault();
 
       // Check if space is held for panning
-      if (e.ctrlKey || e.metaKey) {
+      if (isPanning.current) {
         startPan(e);
         return;
       }
@@ -226,6 +238,9 @@ export default function CanvasManager() {
       if (currentToolRef.current === "eraser") {
         //this returns the points tobe removed from canvas
         //here we are removing locally
+
+        //publish -> subscribe method -> changes commited for all expect the one drawing it i think?
+
         const erasedStrokes = startErasing(point);
         if (erasedStrokes.length > 0) {
           // Remove erased strokes from completed strokes and add to history
@@ -234,11 +249,12 @@ export default function CanvasManager() {
               (s) => s.id !== strokeId
             );
           });
-          //   addToHistory();
         }
         scheduleRedraw();
       } else {
         const newStrokeId = startNewStroke(point);
+        //new
+        scheduleRedraw();
 
         client.publish({
           destination: "/app/draw.points",
@@ -263,18 +279,19 @@ export default function CanvasManager() {
       scheduleRedraw,
       myUserId,
       completedStrokes,
-      //   addToHistory,
+      isPanning,
     ]
   );
 
   const handlePointerMove = useCallback(
     (e) => {
-      if (!client) return;
+      if (!client || !isDownPressed.current) return;
       e.preventDefault();
 
       const point = getCanvasPoint(e);
 
       if (isPanning.current) {
+        console.log("yeah");
         continuePan(e);
         scheduleRedraw();
         return;
@@ -294,8 +311,7 @@ export default function CanvasManager() {
         }
         scheduleRedraw();
       } else {
-        addPointToStroke(point);
-        scheduleRedraw();
+        if (addPointToStroke(point)) scheduleRedraw();
 
         // Throttled network update
         const now = performance.now();
@@ -335,6 +351,8 @@ export default function CanvasManager() {
   const lastEventTime = useRef(0);
 
   const handlePointerUp = useCallback(() => {
+    isDownPressed.current = false;
+
     if (isPanning.current) {
       stopPan();
       return;
@@ -385,25 +403,6 @@ export default function CanvasManager() {
     myUserId,
   ]);
 
-  const canvasStyle = useMemo(
-    () => ({
-      width: "100vw",
-      height: "100vh",
-      display: "block",
-      touchAction: "none",
-      background: "#f8f9fa",
-      cursor: isPanning.current
-        ? "grabbing"
-        : currentToolRef.current === "eraser"
-        ? "crosshair"
-        : currentToolRef.current === "pan"
-        ? "grab"
-        : "crosshair",
-      userSelect: "none",
-    }),
-    [isPanning, currentToolRef]
-  );
-
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <Toolbar
@@ -415,25 +414,21 @@ export default function CanvasManager() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onResetView={resetView}
-        zoom={viewport.zoom}
+        zoom={viewportRef.current.zoom}
       />
 
-      <canvas
-        ref={canvasRef}
-        style={canvasStyle}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onWheel={(e) => {
-          e.preventDefault();
-          if (e.deltaY < 0) {
-            zoomIn(getCanvasPoint(e));
-          } else {
-            zoomOut(getCanvasPoint(e));
-          }
-          scheduleRedraw();
-        }}
+      <CanvasDraw
+        isPanning={isPanning}
+        currentToolRef={currentToolRef}
+        canvasRef={canvasRef}
+        handlePointerDown={handlePointerDown}
+        handlePointerMove={handlePointerMove}
+        handlePointerUp={handlePointerUp}
+        zoomIn={zoomIn}
+        zoomOut={zoomOut}
+        scheduleRedraw={scheduleRedraw}
+        getCanvasPoint={getCanvasPoint}
+        isDownPressed={isDownPressed}
       />
     </div>
   );

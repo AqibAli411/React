@@ -4,7 +4,7 @@ import SockJS from "sockjs-client";
 
 //custom hook to handle the connecting logic
 //onMessage is the subscribe call back
-function useWebSocket(onDraw, onStop) {
+function useWebSocket(onDraw, onStop, subUndo) {
   const [connected, setConnected] = useState(false);
   //saves the client
   const clientRef = useRef(null);
@@ -26,12 +26,13 @@ function useWebSocket(onDraw, onStop) {
         setConnected(true);
 
         //For each topic, call the subscribe with given onDraw method
-        client.subscribe("/topic/draw/start", (message) =>
-          onDraw(message)
-        );
+        client.subscribe("/topic/draw/start", (message) => onDraw(message));
 
         //For each topic, call the subscribe with given onStop method
         client.subscribe("/topic/draw/stop", (message) => onStop(message));
+
+        //undo
+        client.subscribe("/topic/draw/undo", (message) => subUndo(message));
       };
 
       //   Callback, invoked on every successful disconnection from the STOMP broker
@@ -49,7 +50,7 @@ function useWebSocket(onDraw, onStop) {
         }
       };
     },
-    [onDraw, onStop]
+    [onDraw, onStop, subUndo]
   );
 
   return { connected, client: clientRef.current };

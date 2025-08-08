@@ -11,8 +11,8 @@ export function useCanvasRenderer(
     myStroke,
     isDrawing,
     currentTool,
-    viewport,
-    transform,
+    viewportRef,
+    transformRef,
   }
 ) {
   const animationFrameRef = useRef(null);
@@ -22,15 +22,18 @@ export function useCanvasRenderer(
   // Draw grid for infinite canvas
   const drawGrid = useCallback(
     (ctx, canvas) => {
-      if (!viewport || transform.scale < 0.5) return; // Don't show grid when zoomed out
+      if (!viewportRef.current || transformRef.current.scale < 0.5) return; // Don't show grid when zoomed out
 
       ctx.save();
 
-      const gridSize = 50 * transform.scale;
-      const offsetX = ((transform.x % gridSize) + gridSize) % gridSize;
-      const offsetY = ((transform.y % gridSize) + gridSize) % gridSize;
+      const gridSize = 50 * transformRef.current.scale;
+      const offsetX =
+        ((transformRef.current.x % gridSize) + gridSize) % gridSize;
+      const offsetY =
+        ((transformRef.current.y % gridSize) + gridSize) % gridSize;
 
-      ctx.strokeStyle = transform.scale > 1 ? "#e0e0e0" : "#f0f0f0";
+      // ctx.strokeStyle = transformRef.current.scale > 1 ? "#e0e0e0" : "#f0f0f0";
+      ctx.strokeStyle = transformRef.current.scale > 1 ? "#e0e0e0" : "#dbd9d9";
       ctx.lineWidth = 0.5;
       ctx.setLineDash([]);
 
@@ -52,22 +55,22 @@ export function useCanvasRenderer(
 
       ctx.restore();
     },
-    [viewport, transform]
+    [transformRef, viewportRef]
   );
 
   // Apply canvas transformation
   const applyTransform = useCallback(
     (ctx) => {
       ctx.setTransform(
-        transform.scale,
+        transformRef.current.scale,
         0,
         0,
-        transform.scale,
-        transform.x,
-        transform.y
+        transformRef.current.scale,
+        transformRef.current.x,
+        transformRef.current.y
       );
     },
-    [transform]
+    [transformRef]
   );
 
   // Reset canvas transformation
@@ -79,7 +82,7 @@ export function useCanvasRenderer(
   const isStrokeVisible = useCallback(
     (stroke) => {
       if (!stroke.points || stroke.points.length === 0) return false;
-      if (transform.scale < 0.1) return false; // Don't render when too zoomed out
+      if (transformRef.current.scale < 0.1) return false; // Don't render when too zoomed out
 
       // Simple bounding box check
       let minX = Infinity,
@@ -95,10 +98,14 @@ export function useCanvasRenderer(
       }
 
       // Transform bounding box to screen coordinates
-      const screenMinX = minX * transform.scale + transform.x;
-      const screenMinY = minY * transform.scale + transform.y;
-      const screenMaxX = maxX * transform.scale + transform.x;
-      const screenMaxY = maxY * transform.scale + transform.y;
+      const screenMinX =
+        minX * transformRef.current.scale + transformRef.current.x;
+      const screenMinY =
+        minY * transformRef.current.scale + transformRef.current.y;
+      const screenMaxX =
+        maxX * transformRef.current.scale + transformRef.current.x;
+      const screenMaxY =
+        maxY * transformRef.current.scale + transformRef.current.y;
 
       const canvas = canvasRef.current;
       if (!canvas) return true;
@@ -112,7 +119,7 @@ export function useCanvasRenderer(
         screenMinY > canvas.height + margin
       );
     },
-    [transform, canvasRef]
+    [transformRef, canvasRef]
   );
 
   const redraw = useCallback(() => {
@@ -152,7 +159,7 @@ export function useCanvasRenderer(
         renderedStrokes++;
       }
     }
-    
+
     /* eslint-disable no-unused-vars */
     for (const [_, strokeData] of liveStrokes.current) {
       if (strokeData && strokeData.points && strokeData.points.length > 0) {
@@ -174,14 +181,20 @@ export function useCanvasRenderer(
     if (process.env.NODE_ENV === "development") {
       ctx.fillStyle = "#666";
       ctx.font = "12px monospace";
-      ctx.fillText(`Zoom: ${(transform.scale * 100).toFixed(0)}%`, 10, 20);
+      ctx.fillText(
+        `Zoom: ${(transformRef.current.scale * 100).toFixed(0)}%`,
+        10,
+        20
+      );
       ctx.fillText(
         `Strokes: ${renderedStrokes}/${completedStrokes.current.length}`,
         10,
         35
       );
       ctx.fillText(
-        `Pan: ${transform.x.toFixed(0)}, ${transform.y.toFixed(0)}`,
+        `Pan: ${transformRef.current.x.toFixed(
+          0
+        )}, ${transformRef.current.y.toFixed(0)}`,
         10,
         50
       );
@@ -194,7 +207,7 @@ export function useCanvasRenderer(
     myStroke,
     isDrawing,
     currentTool,
-    transform,
+    transformRef,
     drawGrid,
     applyTransform,
     resetTransform,
