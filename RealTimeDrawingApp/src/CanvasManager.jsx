@@ -158,7 +158,30 @@ export default function CanvasManager() {
     [scheduleRedraw, liveStrokes, myUserId, addCompletedStroke, addToHistory]
   );
 
-  const { client } = useWebSocket(onDraw, onStop, subUndo);
+  const onErase = useCallback(
+    (message) => {
+      if (!isMounted.current) return;
+
+      try {
+        const { erasedStrokes, userId } = JSON.parse(message.body);
+
+        if (erasedStrokes.length > 0) {
+          // Remove erased strokes from completed strokes and add to history
+          erasedStrokes.forEach((strokeId) => {
+            completedStrokes.current = completedStrokes.current.filter(
+              (s) => s.id !== strokeId
+            );
+          });
+        }
+        scheduleRedraw();
+      } catch (error) {
+        console.error("Error parsing stop message:", error);
+      }
+    },
+    [completedStrokes, scheduleRedraw]
+  );
+
+  const { client } = useWebSocket(onDraw, onStop, subUndo, onErase);
 
   // Set mounted flag
   useEffect(() => {
@@ -240,20 +263,27 @@ export default function CanvasManager() {
         //here we are removing locally
 
         //publish -> subscribe method -> changes commited for all expect the one drawing it i think?
-
         const erasedStrokes = startErasing(point);
-        if (erasedStrokes.length > 0) {
-          // Remove erased strokes from completed strokes and add to history
-          erasedStrokes.forEach((strokeId) => {
-            completedStrokes.current = completedStrokes.current.filter(
-              (s) => s.id !== strokeId
-            );
-          });
-        }
-        scheduleRedraw();
+
+        client.publish({
+          destination: "/app/erase.strokes",
+          body: JSON.stringify({
+            erasedStrokes,
+            userId: myUserId.current,
+          }),
+        });
+
+        // if (erasedStrokes.length > 0) {
+        //   // Remove erased strokes from completed strokes and add to history
+        //   erasedStrokes.forEach((strokeId) => {
+        //     completedStrokes.current = completedStrokes.current.filter(
+        //       (s) => s.id !== strokeId
+        //     );
+        //   });
+        // }
+        // scheduleRedraw();
       } else {
         const newStrokeId = startNewStroke(point);
-        //new
         scheduleRedraw();
 
         client.publish({
@@ -278,7 +308,7 @@ export default function CanvasManager() {
       startNewStroke,
       scheduleRedraw,
       myUserId,
-      completedStrokes,
+      // completedStrokes,
       isPanning,
     ]
   );
@@ -301,15 +331,23 @@ export default function CanvasManager() {
 
       if (currentToolRef.current === "eraser") {
         const erasedStrokes = continueErasing(point);
-        if (erasedStrokes.length > 0) {
-          // Remove erased strokes from completed strokes and add to history
-          erasedStrokes.forEach((strokeId) => {
-            completedStrokes.current = completedStrokes.current.filter(
-              (s) => s.id !== strokeId
-            );
-          });
-        }
-        scheduleRedraw();
+
+        client.publish({
+          destination: "/app/erase.strokes",
+          body: JSON.stringify({
+            erasedStrokes,
+            userId: myUserId.current,
+          }),
+        });
+        // if (erasedStrokes.length > 0) {
+        //   // Remove erased strokes from completed strokes and add to history
+        //   erasedStrokes.forEach((strokeId) => {
+        //     completedStrokes.current = completedStrokes.current.filter(
+        //       (s) => s.id !== strokeId
+        //     );
+        //   });
+        // }
+        // scheduleRedraw();
       } else {
         if (addPointToStroke(point)) scheduleRedraw();
 
@@ -343,7 +381,7 @@ export default function CanvasManager() {
       addPointToStroke,
       scheduleRedraw,
       myUserId,
-      completedStrokes,
+      // completedStrokes,
       currentStrokeId,
     ]
   );
