@@ -1,4 +1,3 @@
-import Link from "./Link";
 import Links from "./Links";
 
 // bg-[radial-gradient(theme('colors.stone.200')_1.5px,transparent_0px),radial-gradient(theme('colors.stone.200')_1.5px,transparent_0px),linear-gradient(to_100%_100%, theme('color.stone.300'), theme('color.stone.200'), theme('color.stone.500'))] 
