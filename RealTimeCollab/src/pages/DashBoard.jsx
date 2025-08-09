@@ -1,13 +1,14 @@
 import AiSection from "../components/AiSection";
 import Canvas from "../components/Canvas";
 import ChatSection from "../components/ChatSection";
-import Options from "../components/Options";
+import ModeHeader from "../components/ModeHeader";
+import Options from "../components/DrawOptions";
 
 function DashBoard() {
   return (
-    <section className="flex flex-col border-1 max-w-[1300px] mx-auto">
-      <Options />
-      <div className="flex  justify-between ">
+    <section className="mx-auto flex max-w-[1330px] flex-col border-1 mt-2">
+      <ModeHeader />
+      <div className="flex justify-between">
         <ChatSection />
         <Canvas />
         {/* <AiSection /> */}
