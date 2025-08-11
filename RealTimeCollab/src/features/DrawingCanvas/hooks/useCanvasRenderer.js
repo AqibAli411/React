@@ -5,6 +5,9 @@ import { drawStrokePoints } from "../utils/drawingUtils";
 export function useCanvasRenderer(
   ctxRef,
   canvasRef,
+  isDarkMode,
+  penWidth,
+  colorRef,
   {
     completedStrokes,
     liveStrokes,
@@ -13,7 +16,7 @@ export function useCanvasRenderer(
     currentTool,
     viewportRef,
     transformRef,
-  }
+  },
 ) {
   const animationFrameRef = useRef(null);
   const lastRenderTime = useRef(0);
@@ -21,10 +24,17 @@ export function useCanvasRenderer(
 
   // Draw grid for infinite canvas
   const drawGrid = useCallback(
-    (ctx, canvas) => {
-      if (!viewportRef.current || transformRef.current.scale < 0.5) return; // Don't show grid when zoomed out
+    (ctx = null, canvas = null) => {
+      // Use provided ctx/canvas or get from refs
+      const context = ctx || ctxRef.current;
+      const canvasElement = canvas || canvasRef.current;
 
-      ctx.save();
+      if (!context || !canvasElement) return;
+
+      // Don't show grid when zoomed out
+      if (!viewportRef.current || transformRef.current.scale < 0.5) return;
+
+      context.save();
 
       const gridSize = 50 * transformRef.current.scale;
       const offsetX =
@@ -32,30 +42,29 @@ export function useCanvasRenderer(
       const offsetY =
         ((transformRef.current.y % gridSize) + gridSize) % gridSize;
 
-      // ctx.strokeStyle = transformRef.current.scale > 1 ? "#e0e0e0" : "#f0f0f0";
-      ctx.strokeStyle = transformRef.current.scale > 1 ? "#e0e0e0" : "#dbd9d9";
-      ctx.lineWidth = 0.5;
-      ctx.setLineDash([]);
+      context.strokeStyle = isDarkMode ? "#333333" : "#dbd9d9";
+      context.lineWidth = 0.5;
+      context.setLineDash([]);
 
       // Draw vertical lines
-      for (let x = offsetX; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
+      for (let x = offsetX; x < canvasElement.width; x += gridSize) {
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, canvasElement.height);
+        context.stroke();
       }
 
       // Draw horizontal lines
-      for (let y = offsetY; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+      for (let y = offsetY; y < canvasElement.height; y += gridSize) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(canvasElement.width, y);
+        context.stroke();
       }
 
-      ctx.restore();
+      context.restore();
     },
-    [transformRef, viewportRef]
+    [transformRef, viewportRef, isDarkMode, ctxRef, canvasRef],
   );
 
   // Apply canvas transformation
@@ -67,10 +76,10 @@ export function useCanvasRenderer(
         0,
         transformRef.current.scale,
         transformRef.current.x,
-        transformRef.current.y
+        transformRef.current.y,
       );
     },
-    [transformRef]
+    [transformRef],
   );
 
   // Reset canvas transformation
@@ -119,7 +128,7 @@ export function useCanvasRenderer(
         screenMinY > canvas.height + margin
       );
     },
-    [transformRef, canvasRef]
+    [transformRef, canvasRef],
   );
 
   const redraw = useCallback(() => {
@@ -137,9 +146,18 @@ export function useCanvasRenderer(
     // Apply transformation for drawing
     applyTransform(ctx);
 
-    // Set drawing properties
-    ctx.fillStyle = "#000000";
-    ctx.strokeStyle = "#000000";
+    // FIXED: Use the current pen width instead of hardcoded value
+    const PEN_STROKES = {
+      size: penWidth.current, // This was the main issue - was hardcoded to 2.5
+      thinning: -0.3,
+      smoothing: 0.35,
+      streamline: 0.15,
+      easing: (t) => t,
+      start: { taper: 0, easing: (t) => t },
+      end: { taper: 0, easing: (t) => t },
+    };
+
+    // Set default drawing properties
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
@@ -155,7 +173,18 @@ export function useCanvasRenderer(
         // Erased strokes shouldn't be rendered
         if (stroke.tool === "eraser") continue;
 
-        drawStrokePoints(ctx, stroke.points, stroke.tool);
+        // Set stroke-specific color
+        const strokeColor = stroke.color;
+
+        ctx.fillStyle = strokeColor;
+        ctx.strokeStyle = strokeColor;
+
+        const strokeOptions = {
+          ...PEN_STROKES,
+          size: stroke.width || PEN_STROKES.size,
+        };
+
+        drawStrokePoints(ctx, stroke.points, stroke.tool, strokeOptions);
         renderedStrokes++;
       }
     }
@@ -165,40 +194,60 @@ export function useCanvasRenderer(
       if (strokeData && strokeData.points && strokeData.points.length > 0) {
         const tempStroke = { points: strokeData.points };
         if (isStrokeVisible(tempStroke)) {
-          drawStrokePoints(ctx, strokeData.points, strokeData.tool || "pen");
+          // Set stroke-specific color for live strokes
+          const strokeColor = strokeData.color || colorRef.current;
+
+          ctx.fillStyle = strokeColor;
+          ctx.strokeStyle = strokeColor;
+
+          const strokeOptions = {
+            ...PEN_STROKES,
+            size: strokeData.width || PEN_STROKES.size,
+          };
+          drawStrokePoints(
+            ctx,
+            strokeData.points,
+            strokeData.tool || "pen",
+            strokeOptions,
+          );
         }
       }
     }
 
     // Draw current local stroke
-    if (isDrawing.current && myStroke.current.length > 0)
-      drawStrokePoints(ctx, myStroke.current, currentTool);
+    if (isDrawing.current && myStroke.current.length > 0) {
+      // Set current color for local stroke
+      const currentColor = colorRef.current;
+
+      ctx.fillStyle = currentColor;
+      ctx.strokeStyle = currentColor;
+
+      drawStrokePoints(ctx, myStroke.current, currentTool, PEN_STROKES);
+    }
 
     // Reset transform for UI elements
     resetTransform(ctx);
 
     // Debug info (only in development)
-
-      ctx.fillStyle = "#666";
-      ctx.font = "12px monospace";
-      ctx.fillText(
-        `Zoom: ${(transformRef.current.scale * 100).toFixed(0)}%`,
-        10,
-        20
-      );
-      ctx.fillText(
-        `Strokes: ${renderedStrokes}/${completedStrokes.current.length}`,
-        10,
-        35
-      );
-      ctx.fillText(
-        `Pan: ${transformRef.current.x.toFixed(
-          0
-        )}, ${transformRef.current.y.toFixed(0)}`,
-        10,
-        50
-      );
-    
+    ctx.fillStyle = "#666";
+    ctx.font = "12px monospace";
+    ctx.fillText(
+      `Zoom: ${(transformRef.current.scale * 100).toFixed(0)}%`,
+      10,
+      20,
+    );
+    ctx.fillText(
+      `Strokes: ${renderedStrokes}/${completedStrokes.current.length}`,
+      10,
+      35,
+    );
+    ctx.fillText(
+      `Pan: ${transformRef.current.x.toFixed(0)}, ${transformRef.current.y.toFixed(0)}`,
+      10,
+      50,
+    );
+    // ADDED: Show current pen width in debug
+    ctx.fillText(`Pen Width: ${penWidth.current}px`, 10, 65);
   }, [
     ctxRef,
     canvasRef,
@@ -212,6 +261,8 @@ export function useCanvasRenderer(
     applyTransform,
     resetTransform,
     isStrokeVisible,
+    penWidth, // Added penWidth to dependencies
+    colorRef,
   ]);
 
   const scheduleRedraw = useCallback(() => {
@@ -244,5 +295,6 @@ export function useCanvasRenderer(
   return {
     redraw,
     scheduleRedraw,
+    drawGrid,
   };
 }

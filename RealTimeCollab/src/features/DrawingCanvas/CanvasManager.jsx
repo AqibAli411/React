@@ -6,15 +6,34 @@ import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useEraser } from "./hooks/useEraser";
 import { useInfiniteCanvas } from "./hooks/useInfiniteCanvas";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-// import { STROKE_OPTIONS } from "./utils/drawingUtils";
-import Toolbar from "./components/Toolbar";
 import CanvasDraw from "./CanvasDraw";
+import DrawOptions from "../../components/DrawOptions";
 
-export default function CanvasManager() {
+export default function CanvasManager({ isDarkMode }) {
   const canvasRef = useRef(null);
+  const containerRef = useRef();
   const ctxRef = useRef(null);
   const isMounted = useRef(false);
   const isDownPressed = useRef(false);
+  const penWidth = useRef(2);
+  const colorRef = useRef(isDarkMode ? "#000000" : "#ffffff");
+
+  //if use has not selected anything, then -> default behave
+  //
+
+  useEffect(
+    function () {
+
+      if (isDarkMode) {
+        console.log("bhi");
+        colorRef.current = "#ffffff";
+      } else {
+        colorRef.current = "#000000";
+      }
+    },
+    [isDarkMode],
+  );
+
   // Initialize drawing state management
   const {
     isDrawing,
@@ -54,15 +73,22 @@ export default function CanvasManager() {
   } = useInfiniteCanvas(canvasRef);
 
   // Initialize canvas renderer
-  const { scheduleRedraw } = useCanvasRenderer(ctxRef, canvasRef, {
-    completedStrokes,
-    liveStrokes,
-    myStroke,
-    isDrawing,
-    currentTool: currentToolRef.current,
-    viewportRef,
-    transformRef,
-  });
+  const { scheduleRedraw, drawGrid } = useCanvasRenderer(
+    ctxRef,
+    canvasRef,
+    isDarkMode,
+    penWidth,
+    colorRef,
+    {
+      completedStrokes,
+      liveStrokes,
+      myStroke,
+      isDrawing,
+      currentTool: currentToolRef.current,
+      viewportRef,
+      transformRef,
+    },
+  );
 
   // Initialize undo/redo system
   const {
@@ -79,13 +105,11 @@ export default function CanvasManager() {
       if (!isMounted.current) return;
 
       const { canUndo } = JSON.parse(message.body);
-      console.log("undo", canUndo);
       if (canUndo) undo();
     },
     [undo],
   );
 
-  // WebSocket message handlers
   const onDraw = useCallback(
     (message) => {
       if (!isMounted.current) return;
@@ -98,8 +122,9 @@ export default function CanvasManager() {
           strokeId: incomingStrokeId,
           userId,
           tool,
+          width, // Added width
+          color, // Added color
         } = JSON.parse(message.body);
-
         //doesn't run for one actually drawing ( doesn't run locally)
         if (userId === myUserId.current) return;
 
@@ -109,6 +134,8 @@ export default function CanvasManager() {
             points: [],
             userId: userId,
             tool: tool || "pen",
+            width: width || 2, // Added width
+            color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
             lastUpdate: performance.now(),
           });
         }
@@ -122,9 +149,10 @@ export default function CanvasManager() {
         console.error("Error parsing draw message:", error);
       }
     },
-    [scheduleRedraw, myUserId, liveStrokes],
+    [scheduleRedraw, myUserId, liveStrokes, isDarkMode],
   );
 
+  // In the onStop callback, update to handle width and color:
   const onStop = useCallback(
     (message) => {
       if (!isMounted.current) return;
@@ -135,6 +163,8 @@ export default function CanvasManager() {
           strokeId: completedStrokeId,
           userId,
           tool,
+          width, // Added width
+          color, // Added color
         } = JSON.parse(message.body);
 
         if (liveStrokes.current.has(completedStrokeId)) {
@@ -151,7 +181,10 @@ export default function CanvasManager() {
             tool: tool || "pen",
             id: completedStrokeId,
             userId: userId,
+            width: width || 2, // Added width
+            color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
           };
+          console.log(strokeWithMetadata.color);
           addCompletedStroke(strokeWithMetadata);
           addToHistory(); // Add to undo history
         }
@@ -161,7 +194,14 @@ export default function CanvasManager() {
         console.error("Error parsing stop message:", error);
       }
     },
-    [scheduleRedraw, liveStrokes, myUserId, addCompletedStroke, addToHistory],
+    [
+      scheduleRedraw,
+      liveStrokes,
+      myUserId,
+      addCompletedStroke,
+      addToHistory,
+      isDarkMode,
+    ],
   );
 
   const onErase = useCallback(
@@ -195,14 +235,13 @@ export default function CanvasManager() {
   // Set mounted flag
   useEffect(() => {
     isMounted.current = true;
-    //marking this
     scheduleRedraw();
+
     return () => {
       isMounted.current = false;
     };
-  }, [scheduleRedraw]);
+  }, [scheduleRedraw, isDarkMode]);
 
-  // Canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -211,33 +250,38 @@ export default function CanvasManager() {
     ctxRef.current = ctx;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
 
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    const handleResize = () => {
-      const newRect = canvas.getBoundingClientRect();
-      canvas.width = newRect.width * dpr;
-      canvas.height = newRect.height * dpr;
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
       scheduleRedraw();
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [scheduleRedraw]);
+    // Initial draw
+    resizeCanvas();
+    drawGrid();
+    // Observe container changes
+    const observer = new ResizeObserver(resizeCanvas);
+    observer.observe(canvas.parentElement); // or the wrapping container
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [scheduleRedraw, drawGrid]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
     canUndo,
     client,
+    containerRef,
     onRedo: () => {
       if (canRedo) {
         redo();
@@ -254,6 +298,8 @@ export default function CanvasManager() {
   const handlePointerDown = useCallback(
     (e) => {
       if (e.button === 2) return;
+      containerRef?.current?.focus();
+
       if (!client) return;
       isDownPressed.current = true;
       e.preventDefault();
@@ -264,15 +310,11 @@ export default function CanvasManager() {
         return;
       }
 
-      const point = getCanvasPoint(e); //gets canvas point responsively
+      const point = getCanvasPoint(e);
 
-      //checks if tool is eraser
       if (currentToolRef.current === "eraser") {
-        //this returns the points tobe removed from canvas
-        //here we are removing locally
-
-        //publish -> subscribe method -> changes commited for all expect the one drawing it i think?
         const erasedStrokes = startErasing(point);
+        if (erasedStrokes.length === 0) return;
 
         client.publish({
           destination: "/app/erase.strokes",
@@ -281,16 +323,6 @@ export default function CanvasManager() {
             userId: myUserId.current,
           }),
         });
-
-        // if (erasedStrokes.length > 0) {
-        //   // Remove erased strokes from completed strokes and add to history
-        //   erasedStrokes.forEach((strokeId) => {
-        //     completedStrokes.current = completedStrokes.current.filter(
-        //       (s) => s.id !== strokeId
-        //     );
-        //   });
-        // }
-        // scheduleRedraw();
       } else {
         const newStrokeId = startNewStroke(point);
         scheduleRedraw();
@@ -304,6 +336,8 @@ export default function CanvasManager() {
             strokeId: newStrokeId,
             userId: myUserId.current,
             tool: currentToolRef.current,
+            width: penWidth.current, // Added width
+            color: colorRef.current, // Added color
           }),
         });
       }
@@ -317,20 +351,23 @@ export default function CanvasManager() {
       startNewStroke,
       scheduleRedraw,
       myUserId,
-      // completedStrokes,
       isPanning,
+      penWidth, // Added dependency
+      colorRef, // Added dependency
     ],
   );
 
   const handlePointerMove = useCallback(
     (e) => {
-      if (!client || !isDownPressed.current) return;
+      if (!client) return;
+
+      if (!isDownPressed.current) return;
+
       e.preventDefault();
 
       const point = getCanvasPoint(e);
 
       if (isPanning.current) {
-        console.log("yeah");
         continuePan(e);
         scheduleRedraw();
         return;
@@ -340,6 +377,7 @@ export default function CanvasManager() {
 
       if (currentToolRef.current === "eraser") {
         const erasedStrokes = continueErasing(point);
+        if (erasedStrokes.length === 0) return;
 
         client.publish({
           destination: "/app/erase.strokes",
@@ -348,21 +386,11 @@ export default function CanvasManager() {
             userId: myUserId.current,
           }),
         });
-        // if (erasedStrokes.length > 0) {
-        //   // Remove erased strokes from completed strokes and add to history
-        //   erasedStrokes.forEach((strokeId) => {
-        //     completedStrokes.current = completedStrokes.current.filter(
-        //       (s) => s.id !== strokeId
-        //     );
-        //   });
-        // }
-        // scheduleRedraw();
       } else {
         if (addPointToStroke(point)) scheduleRedraw();
 
         // Throttled network update
         const now = performance.now();
-        //this gives nearly 60fps
         if (now - lastEventTime.current >= 16) {
           lastEventTime.current = now;
           client.publish({
@@ -374,6 +402,8 @@ export default function CanvasManager() {
               strokeId: currentStrokeId.current,
               userId: myUserId.current,
               tool: currentToolRef.current,
+              width: penWidth.current, // Added width
+              color: colorRef.current, // Added color
             }),
           });
         }
@@ -390,8 +420,9 @@ export default function CanvasManager() {
       addPointToStroke,
       scheduleRedraw,
       myUserId,
-      // completedStrokes,
       currentStrokeId,
+      penWidth,
+      colorRef,
     ],
   );
 
@@ -417,6 +448,8 @@ export default function CanvasManager() {
           tool: currentToolRef.current,
           id: strokeData.id,
           userId: myUserId.current,
+          width: penWidth.current, // Added width
+          color: colorRef.current, // Added color
         };
 
         addCompletedStroke(strokeWithMetadata);
@@ -430,6 +463,8 @@ export default function CanvasManager() {
             strokeId: strokeData.id,
             userId: myUserId.current,
             tool: currentToolRef.current,
+            width: penWidth.current, // Added width
+            color: colorRef.current, // Added color
           }),
         });
       }
@@ -448,22 +483,19 @@ export default function CanvasManager() {
     addToHistory,
     scheduleRedraw,
     myUserId,
+    penWidth,
+    colorRef,
   ]);
 
   return (
-    <div>
-      {/* <Toolbar
+    <>
+      <DrawOptions
+        isDarkMode={isDarkMode}
         currentToolRef={currentToolRef}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        onResetView={resetView}
-        zoom={viewportRef.current.zoom}
-      /> */}
-
+        penWidth={penWidth}
+        colorRef={colorRef}
+        scheduleRedraw={scheduleRedraw}
+      />
       <CanvasDraw
         isPanning={isPanning}
         currentToolRef={currentToolRef}
@@ -476,7 +508,8 @@ export default function CanvasManager() {
         scheduleRedraw={scheduleRedraw}
         getCanvasPoint={getCanvasPoint}
         isDownPressed={isDownPressed}
+        ref={containerRef}
       />
-    </div>
+    </>
   );
 }

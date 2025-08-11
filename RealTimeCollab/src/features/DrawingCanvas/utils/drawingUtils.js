@@ -1,19 +1,8 @@
 // utils/drawingUtils.js
 import { getStroke } from "perfect-freehand";
 
-// Unified stroke options for consistency
-export const STROKE_OPTIONS = {
-  size: 2.5,
-  thinning: -0.3,
-  smoothing: 0.35,
-  streamline: 0.15,
-  easing: (t) => t,
-  start: { taper: 0, easing: (t) => t },
-  end: { taper: 0, easing: (t) => t },
-};
-
 export const ERASER_OPTIONS = {
-  size: 20,
+  size: 6,
   thinning: 0,
   smoothing: 0.2,
   streamline: 0.1,
@@ -23,7 +12,7 @@ export const ERASER_OPTIONS = {
 };
 
 // Optimized stroke rendering with tool support
-export function drawStrokePoints(ctx, points, tool = "pen") {
+export function drawStrokePoints(ctx, points, tool = "pen", PEN_STROKES) {
   if (!points || points.length === 0) return;
 
   // Handle different tools
@@ -33,18 +22,18 @@ export function drawStrokePoints(ctx, points, tool = "pen") {
       break;
     case "pen":
     default:
-      drawPenStroke(ctx, points);
+      drawPenStroke(ctx, points, PEN_STROKES);
       break;
   }
 }
 
-function drawPenStroke(ctx, points) {
+function drawPenStroke(ctx, points, PEN_STROKES) {
   if (points.length === 0) return;
 
   // For single points, draw a small circle
   if (points.length === 1) {
     const [x, y, pressure = 0.5] = points[0];
-    const radius = (STROKE_OPTIONS.size * pressure) / 2;
+    const radius = (PEN_STROKES.size * pressure) / 2;
     ctx.beginPath();
     ctx.arc(x, y, Math.max(radius, 1), 0, Math.PI * 2);
     ctx.fill();
@@ -54,7 +43,7 @@ function drawPenStroke(ctx, points) {
   // For very short strokes (2-3 points), use simple line rendering
   if (points.length < 4) {
     ctx.beginPath();
-    ctx.lineWidth = STROKE_OPTIONS.size;
+    ctx.lineWidth = PEN_STROKES.size;
     ctx.moveTo(points[0][0], points[0][1]);
     for (let i = 1; i < points.length; i++) {
       ctx.lineTo(points[i][0], points[i][1]);
@@ -64,7 +53,7 @@ function drawPenStroke(ctx, points) {
   }
 
   // For longer strokes, use perfect-freehand
-  const strokePoints = getStroke(points, STROKE_OPTIONS);
+  const strokePoints = getStroke(points, PEN_STROKES);
 
   if (strokePoints.length < 3) return;
 

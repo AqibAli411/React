@@ -1,7 +1,6 @@
 // hooks/useKeyboardShortcuts.js
 import { useEffect, useCallback } from "react";
 
-
 export function useKeyboardShortcuts({
   client,
   canUndo,
@@ -13,6 +12,7 @@ export function useKeyboardShortcuts({
   onZoomOut,
   onSelectPen,
   isDownPressed,
+  containerRef,
 }) {
   const handleKeyDown = useCallback(
     (e) => {
@@ -29,6 +29,8 @@ export function useKeyboardShortcuts({
         e.preventDefault();
         //as user enters "ctrl + z" it should go back for ever user
         //we will publish here -> subscribe method -> call undo method
+        if(!client) return;
+
         client.publish({
           destination: "/app/undo",
           body: JSON.stringify({
@@ -65,9 +67,10 @@ export function useKeyboardShortcuts({
       // Space - Pan mode (hold)
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
+        console.log("here");
         if (!isDownPressed.current) isPanning.current = true;
         return;
-      } 
+      }
 
       // Ctrl/Cmd + 0 - Reset view
       if (ctrlOrCmd && e.key === "0") {
@@ -89,28 +92,6 @@ export function useKeyboardShortcuts({
         onZoomOut?.();
         return;
       }
-
-      //   // Numbers 1-9 for zoom levels
-      //   if (!ctrlOrCmd && /^[1-9]$/.test(e.key)) {
-      //     e.preventDefault();
-      //     const zoomLevel = parseInt(e.key) * 0.2; // 1=20%, 2=40%, etc., 5=100%
-      //     onZoomTo?.(zoomLevel);
-      //     return;
-      //   }
-
-      //   // Escape - Cancel current action
-      //   if (e.key === "Escape") {
-      //     e.preventDefault();
-      //     onEscape?.();
-      //     return;
-      //   }
-
-      //   // Delete/Backspace - Delete selected (if any)
-      //   if (e.key === "Delete" || e.key === "Backspace") {
-      //     e.preventDefault();
-      //     onDelete?.();
-      //     return;
-      //   }
     },
     [
       onRedo,
@@ -123,7 +104,7 @@ export function useKeyboardShortcuts({
       currentToolRef,
       isPanning,
       isDownPressed,
-    ]
+    ],
   );
 
   const handleKeyUp = useCallback(
@@ -135,16 +116,19 @@ export function useKeyboardShortcuts({
         return;
       }
     },
-    [isPanning]
+    [isPanning],
   );
 
   useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
+    const node = containerRef.current;
+    if(!node) return;
+    node.focus();
+    node.addEventListener("keydown", handleKeyDown);
+    node.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
+      node.removeEventListener("keydown", handleKeyDown);
+      node.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleKeyDown, handleKeyUp]);
+  }, [handleKeyDown, handleKeyUp, containerRef]);
 }

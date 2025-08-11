@@ -1,35 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
-function CanvasDraw({
-  isPanning,
-  currentToolRef,
-  canvasRef,
-  handlePointerDown,
-  handlePointerMove,
-  handlePointerUp,
-  zoomIn,
-  zoomOut,
-  scheduleRedraw,
-  getCanvasPoint,
-  isDownPressed,
-}) {
-  const containerRef = useRef();
+const CanvasDraw = forwardRef(function CanvasDraw(
+  {
+    isPanning,
+    currentToolRef,
+    canvasRef,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    zoomIn,
+    zoomOut,
+    scheduleRedraw,
+    getCanvasPoint,
+    isDownPressed,
+  },
+  ref,
+) {
   const [isGrabbing, setIsGrabbing] = useState(false);
   const [isMouseDown, SetIsMouseDown] = useState(false);
-  
-  const canvasStyle = {
-    width: "100%",
-    height: "100%",
-    display: "block",
-    touchAction: "none",
-    background: "#f8f9fa",
-    cursor: !isGrabbing ? "crosshair" : !isMouseDown ? "grab" : "grabbing",
-    userSelect: "none",
-  };
 
   useEffect(() => {
     const handleWheel = (e) => {
-      console.log(isPanning.current);
       e.preventDefault(); // now works because passive is false
       if (!e.ctrlKey) return;
       if (e.deltaY < 0) {
@@ -43,7 +34,6 @@ function CanvasDraw({
     const handleKeyUp = (e) => {
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
-        console.log(isDownPressed.current);
         setIsGrabbing(true);
         return;
       }
@@ -56,16 +46,17 @@ function CanvasDraw({
         return;
       }
     };
-
-    const container = containerRef.current;
+    const container = ref?.current;
+    if (!container) return;
+    container.focus();
     container.addEventListener("wheel", handleWheel, { passive: false });
-    document.addEventListener("keydown", handleKeyUp);
-    document.addEventListener("keyup", handleKeyDown);
+    container.addEventListener("keydown", handleKeyUp);
+    container.addEventListener("keyup", handleKeyDown);
 
     return () => {
       container.removeEventListener("wheel", handleWheel);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
+      container.removeEventListener("keydown", handleKeyDown);
+      container.removeEventListener("keyup", handleKeyUp);
     };
   }, [
     getCanvasPoint,
@@ -75,13 +66,13 @@ function CanvasDraw({
     isPanning,
     currentToolRef,
     isDownPressed,
+    ref,
   ]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+    <div ref={ref} className="h-full w-full focus:outline-none" tabIndex={0}>
       <canvas
         ref={canvasRef}
-        style={canvasStyle}
         onPointerDown={(e) => {
           SetIsMouseDown(true);
           handlePointerDown(e);
@@ -92,9 +83,10 @@ function CanvasDraw({
         }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerUp}
+        className={`block h-full w-full touch-none bg-[#f8f9fa] dark:bg-neutral-900 select-none ${!isGrabbing ? "cursor-crosshair" : !isMouseDown ? "cursor-grab" : "cursor-grabbing"} `}
       />
     </div>
   );
-}
+});
 
 export default CanvasDraw;
