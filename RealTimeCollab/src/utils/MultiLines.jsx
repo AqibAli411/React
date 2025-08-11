@@ -1,4 +1,4 @@
-function MultiLines() {
+function MultiLines({ color }) {
   return (
     <svg
       width="24"
@@ -12,8 +12,8 @@ function MultiLines() {
         y1="6"
         x2="21"
         y2="6"
-        stroke="black"
-        strokeWidth="1.3"
+        stroke={color}
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
 
@@ -22,8 +22,8 @@ function MultiLines() {
         y1="12"
         x2="21"
         y2="12"
-        stroke="black"
-        strokeWidth="2"
+        stroke={color}
+        strokeWidth="2.3"
         strokeLinecap="round"
       />
 
@@ -32,8 +32,8 @@ function MultiLines() {
         y1="18"
         x2="21"
         y2="18"
-        stroke="black"
-        strokeWidth="3"
+        stroke={color}
+        strokeWidth="2.85"
         strokeLinecap="round"
       />
     </svg>
