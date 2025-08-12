@@ -1,16 +1,21 @@
 import DashBoard from "./DashBoard";
-
+import RoomPage from "./RoomPage";
+//  {
+//    /* <Header />
+//       <Background>
+//         <HeroSection />
+//         <SideSvgs />
+//       </Background> */
+//  }
+//  {
+//    /* <DashBoard/> */
+//  }
 
 function HomePage() {
   return (
     <>
-      {/* <Header />
-      <Background>
-        <HeroSection />
-        <SideSvgs />
-      </Background> */}
-      <DashBoard/>
-   
+     
+        <RoomPage />
     </>
   );
 }
