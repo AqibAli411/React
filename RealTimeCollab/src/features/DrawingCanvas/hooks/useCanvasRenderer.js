@@ -174,7 +174,10 @@ export function useCanvasRenderer(
         if (stroke.tool === "eraser") continue;
 
         // Set stroke-specific color
-        const strokeColor = stroke.color;
+        let strokeColor = stroke.color;
+
+        if (strokeColor === "#000000" && isDarkMode) strokeColor = "#ffffff";
+        if (strokeColor === "#ffffff" && !isDarkMode) strokeColor = "#000000";
 
         ctx.fillStyle = strokeColor;
         ctx.strokeStyle = strokeColor;
@@ -195,7 +198,10 @@ export function useCanvasRenderer(
         const tempStroke = { points: strokeData.points };
         if (isStrokeVisible(tempStroke)) {
           // Set stroke-specific color for live strokes
-          const strokeColor = strokeData.color || colorRef.current;
+          let strokeColor = strokeData.color || colorRef.current;
+
+          if (strokeColor === "#000000" && isDarkMode) strokeColor = "#ffffff";
+          if (strokeColor === "#ffffff" && !isDarkMode) strokeColor = "#000000";
 
           ctx.fillStyle = strokeColor;
           ctx.strokeStyle = strokeColor;
@@ -217,10 +223,14 @@ export function useCanvasRenderer(
     // Draw current local stroke
     if (isDrawing.current && myStroke.current.length > 0) {
       // Set current color for local stroke
-      const currentColor = colorRef.current;
 
-      ctx.fillStyle = currentColor;
-      ctx.strokeStyle = currentColor;
+      let color = colorRef.current;
+
+      if (color === "#000000" && isDarkMode) color = "#ffffff";
+      if (color === "#ffffff" && !isDarkMode) color = "#000000";
+
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
 
       drawStrokePoints(ctx, myStroke.current, currentTool, PEN_STROKES);
     }
@@ -263,6 +273,7 @@ export function useCanvasRenderer(
     isStrokeVisible,
     penWidth, // Added penWidth to dependencies
     colorRef,
+    isDarkMode,
   ]);
 
   const scheduleRedraw = useCallback(() => {

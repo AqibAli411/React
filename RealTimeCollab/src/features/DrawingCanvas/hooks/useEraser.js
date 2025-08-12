@@ -2,9 +2,11 @@
 import { useRef, useCallback } from "react";
 
 export function useEraser(completedStrokes, isDrawing) {
+  // FIXED: Separate eraser state from drawing state
   const isErasing = useRef(false);
-  const eraserSize = useRef(20); // Eraser size in pixels
+  const eraserSize = useRef(20);
   const lastErasePoint = useRef(null);
+  const erasedInCurrentSession = useRef(new Set()); // Track erased strokes in current session
 
   // Check if a point is within eraser distance from a stroke
   const isPointNearStroke = useCallback((point, stroke, threshold) => {
@@ -13,7 +15,6 @@ export function useEraser(completedStrokes, isDrawing) {
     for (const strokePoint of stroke.points) {
       const [sx, sy] = strokePoint;
       const distance = Math.sqrt((px - sx) ** 2 + (py - sy) ** 2);
-      //if any one of point has a distance with given stroke less than 0.5 then return true
       if (distance <= threshold) {
         return true;
       }
@@ -21,7 +22,7 @@ export function useEraser(completedStrokes, isDrawing) {
     return false;
   }, []);
 
-  // Check if any part of a stroke intersects with the eraser path
+  // IMPROVED: Better line-segment intersection detection
   const isStrokeInEraserPath = useCallback(
     (stroke, startPoint, endPoint, eraserRadius) => {
       if (!stroke.points || stroke.points.length === 0) return false;
@@ -29,17 +30,12 @@ export function useEraser(completedStrokes, isDrawing) {
       // Check each point in the stroke against the eraser line segment
       for (const strokePoint of stroke.points) {
         const [sx, sy] = strokePoint;
-
-        // Calculate distance from stroke point to eraser line segment
         const [x1, y1] = startPoint;
         const [x2, y2] = endPoint;
 
-        // M = Ai + Bj
-        // N = Ci + Dj
-        // M.N = A*C + B*D
+        // Calculate distance from stroke point to eraser line segment
         const A = sx - x1;
         const B = sy - y1;
-
         const C = x2 - x1;
         const D = y2 - y1;
 
@@ -74,30 +70,52 @@ export function useEraser(completedStrokes, isDrawing) {
 
       return false;
     },
-    []
+    [],
   );
 
-  //main function responsible for erasing stuff
+  // FIXED: Remove local strokes immediately for smooth erasing
+  const removeStrokesLocally = useCallback(
+    (strokeIds) => {
+      strokeIds.forEach((strokeId) => {
+        erasedInCurrentSession.current.add(strokeId);
+        // Remove from completed strokes immediately
+        completedStrokes.current = completedStrokes.current.filter(
+          (stroke) => stroke.id !== strokeId,
+        );
+      });
+    },
+    [completedStrokes],
+  );
+
+  // FIXED: Separate eraser state management
   const startErasing = useCallback(
     (point) => {
-      isDrawing.current = true;
-      //sets the isErasing tobe true and records last point
+      // FIXED: Don't modify shared drawing state
       isErasing.current = true;
       lastErasePoint.current = point;
 
       // Find strokes to erase at the starting point
       const strokesToErase = [];
 
-      completedStrokes.current.forEach((stroke, index) => {
+      completedStrokes.current.forEach((stroke) => {
+        // Skip already erased strokes
+        if (erasedInCurrentSession.current.has(stroke.id)) return;
+
         if (isPointNearStroke(point, stroke, eraserSize.current)) {
-          //recording which strokes are tobe removed
-          strokesToErase.push(stroke.id || index);
+          strokesToErase.push(
+            stroke.id || `temp_${Date.now()}_${Math.random()}`,
+          );
         }
       });
 
+      // FIXED: Remove strokes locally immediately for smooth experience
+      if (strokesToErase.length > 0) {
+        removeStrokesLocally(strokesToErase);
+      }
+
       return strokesToErase;
     },
-    [isPointNearStroke, completedStrokes, isDrawing]
+    [isPointNearStroke, completedStrokes, removeStrokesLocally],
   );
 
   const continueErasing = useCallback(
@@ -106,12 +124,13 @@ export function useEraser(completedStrokes, isDrawing) {
         return [];
       }
 
-      if (!isDrawing.current) return;
-
       const strokesToErase = [];
 
-      completedStrokes.current.forEach((stroke, index) => {
-        const strokeId = stroke.id || index;
+      completedStrokes.current.forEach((stroke) => {
+        // Skip already erased strokes
+        if (erasedInCurrentSession.current.has(stroke.id)) return;
+
+        const strokeId = stroke.id || `temp_${Date.now()}_${Math.random()}`;
 
         // Check if stroke intersects with eraser path
         if (
@@ -119,44 +138,57 @@ export function useEraser(completedStrokes, isDrawing) {
             stroke,
             lastErasePoint.current,
             point,
-            eraserSize.current
+            eraserSize.current,
           )
         ) {
           strokesToErase.push(strokeId);
         }
       });
 
+      // FIXED: Remove strokes locally immediately
+      if (strokesToErase.length > 0) {
+        removeStrokesLocally(strokesToErase);
+      }
+
       lastErasePoint.current = point;
       return strokesToErase;
     },
-    [isStrokeInEraserPath, completedStrokes, isDrawing]
+    [isStrokeInEraserPath, completedStrokes, removeStrokesLocally],
   );
 
   const stopErasing = useCallback(() => {
-    isDrawing.current = false;
+    // FIXED: Don't modify shared drawing state
     isErasing.current = false;
     lastErasePoint.current = null;
-  }, [isDrawing]);
+    // Clear erased session when stopping (for network sync)
+    erasedInCurrentSession.current.clear();
+  }, []);
+
+  // ADDED: Method to check if currently erasing
+  const getIsErasing = useCallback(() => {
+    return isErasing.current;
+  }, []);
 
   const getErasedStrokes = useCallback(
     (point) => {
       const strokesToErase = [];
 
-      completedStrokes.current.forEach((stroke, index) => {
+      completedStrokes.current.forEach((stroke) => {
         if (isPointNearStroke(point, stroke, eraserSize.current)) {
-          strokesToErase.push(stroke.id || index);
+          strokesToErase.push(
+            stroke.id || `temp_${Date.now()}_${Math.random()}`,
+          );
         }
       });
 
       return strokesToErase;
     },
-    [isPointNearStroke, completedStrokes]
+    [isPointNearStroke, completedStrokes],
   );
 
-  //sets the eraser size
+  // Sets the eraser size
   const setEraserSize = useCallback((size) => {
-    // 5 =< size <= 100
-    eraserSize.current = Math.max(5, Math.min(100, size)); // Min 5px, Max 100px
+    eraserSize.current = Math.max(5, Math.min(100, size));
   }, []);
 
   const getEraserSize = useCallback(() => {
@@ -164,7 +196,8 @@ export function useEraser(completedStrokes, isDrawing) {
   }, []);
 
   return {
-    isErasing,
+    isErasing: isErasing.current, // Return the current value, not ref
+    getIsErasing,
     startErasing,
     continueErasing,
     stopErasing,

@@ -18,22 +18,6 @@ export default function CanvasManager({ isDarkMode }) {
   const penWidth = useRef(2);
   const colorRef = useRef(isDarkMode ? "#000000" : "#ffffff");
 
-  //if use has not selected anything, then -> default behave
-  //
-
-  useEffect(
-    function () {
-
-      if (isDarkMode) {
-        console.log("bhi");
-        colorRef.current = "#ffffff";
-      } else {
-        colorRef.current = "#000000";
-      }
-    },
-    [isDarkMode],
-  );
-
   // Initialize drawing state management
   const {
     isDrawing,
@@ -122,8 +106,8 @@ export default function CanvasManager({ isDarkMode }) {
           strokeId: incomingStrokeId,
           userId,
           tool,
-          width, // Added width
-          color, // Added color
+          width,
+          color,
         } = JSON.parse(message.body);
         //doesn't run for one actually drawing ( doesn't run locally)
         if (userId === myUserId.current) return;
@@ -209,25 +193,28 @@ export default function CanvasManager({ isDarkMode }) {
       if (!isMounted.current) return;
 
       try {
-        const {
-          erasedStrokes,
-          // userId
-        } = JSON.parse(message.body);
+        const { erasedStrokes, userId } = JSON.parse(message.body);
+
+        // Don't process our own erase messages (already handled locally)
+        if (Number(userId) === Number(myUserId.current)) {
+          return;
+        }
 
         if (erasedStrokes.length > 0) {
-          // Remove erased strokes from completed strokes and add to history
+          // Remove erased strokes from completed strokes for other users
           erasedStrokes.forEach((strokeId) => {
             completedStrokes.current = completedStrokes.current.filter(
               (s) => s.id !== strokeId,
             );
           });
+          addToHistory(); // Add to undo history
         }
         scheduleRedraw();
       } catch (error) {
-        console.error("Error parsing stop message:", error);
+        console.error("Error parsing erase message:", error);
       }
     },
-    [completedStrokes, scheduleRedraw],
+    [completedStrokes, scheduleRedraw, myUserId, addToHistory],
   );
 
   const { client } = useWebSocket(onDraw, onStop, subUndo, onErase);
@@ -294,7 +281,6 @@ export default function CanvasManager({ isDarkMode }) {
     isDownPressed,
   });
 
-  // Event handlers
   const handlePointerDown = useCallback(
     (e) => {
       if (e.button === 2) return;
@@ -313,16 +299,22 @@ export default function CanvasManager({ isDarkMode }) {
       const point = getCanvasPoint(e);
 
       if (currentToolRef.current === "eraser") {
+        // FIXED: Eraser doesn't need drawing state
         const erasedStrokes = startErasing(point);
-        if (erasedStrokes.length === 0) return;
 
-        client.publish({
-          destination: "/app/erase.strokes",
-          body: JSON.stringify({
-            erasedStrokes,
-            userId: myUserId.current,
-          }),
-        });
+        // Always trigger redraw for immediate visual feedback
+        scheduleRedraw();
+
+        // Send to network only if strokes were actually erased
+        if (erasedStrokes.length > 0) {
+          client.publish({
+            destination: "/app/erase.strokes",
+            body: JSON.stringify({
+              erasedStrokes,
+              userId: myUserId.current,
+            }),
+          });
+        }
       } else {
         const newStrokeId = startNewStroke(point);
         scheduleRedraw();
@@ -336,8 +328,8 @@ export default function CanvasManager({ isDarkMode }) {
             strokeId: newStrokeId,
             userId: myUserId.current,
             tool: currentToolRef.current,
-            width: penWidth.current, // Added width
-            color: colorRef.current, // Added color
+            width: penWidth.current,
+            color: colorRef.current,
           }),
         });
       }
@@ -352,11 +344,12 @@ export default function CanvasManager({ isDarkMode }) {
       scheduleRedraw,
       myUserId,
       isPanning,
-      penWidth, // Added dependency
-      colorRef, // Added dependency
+      penWidth,
+      colorRef,
     ],
   );
 
+  // FIXED: Update handlePointerMove for better eraser logic
   const handlePointerMove = useCallback(
     (e) => {
       if (!client) return;
@@ -373,20 +366,27 @@ export default function CanvasManager({ isDarkMode }) {
         return;
       }
 
-      if (!isDrawing.current) return;
-
       if (currentToolRef.current === "eraser") {
+        // FIXED: Eraser doesn't need isDrawing check
         const erasedStrokes = continueErasing(point);
-        if (erasedStrokes.length === 0) return;
 
-        client.publish({
-          destination: "/app/erase.strokes",
-          body: JSON.stringify({
-            erasedStrokes,
-            userId: myUserId.current,
-          }),
-        });
+        // Always trigger redraw for smooth erasing
+        scheduleRedraw();
+
+        // Send to network only if strokes were actually erased
+        if (erasedStrokes.length > 0) {
+          client.publish({
+            destination: "/app/erase.strokes",
+            body: JSON.stringify({
+              erasedStrokes,
+              userId: myUserId.current,
+            }),
+          });
+        }
       } else {
+        // Regular drawing logic - only if actually drawing
+        if (!isDrawing.current) return;
+
         if (addPointToStroke(point)) scheduleRedraw();
 
         // Throttled network update
@@ -402,8 +402,8 @@ export default function CanvasManager({ isDarkMode }) {
               strokeId: currentStrokeId.current,
               userId: myUserId.current,
               tool: currentToolRef.current,
-              width: penWidth.current, // Added width
-              color: colorRef.current, // Added color
+              width: penWidth.current,
+              color: colorRef.current,
             }),
           });
         }
@@ -426,8 +426,7 @@ export default function CanvasManager({ isDarkMode }) {
     ],
   );
 
-  const lastEventTime = useRef(0);
-
+  // FIXED: Update handlePointerUp for eraser
   const handlePointerUp = useCallback(() => {
     isDownPressed.current = false;
 
@@ -436,38 +435,41 @@ export default function CanvasManager({ isDarkMode }) {
       return;
     }
 
+    if (currentToolRef.current === "eraser") {
+      // FIXED: Eraser has its own stop logic
+      stopErasing();
+      scheduleRedraw(); // Final redraw after erasing
+      return;
+    }
+
+    // Regular drawing logic
     if (!isDrawing.current || !client) return;
 
-    if (currentToolRef.current === "eraser") {
-      stopErasing();
-    } else {
-      const strokeData = clearLocalStroke();
-      if (strokeData.points.length > 0) {
-        const strokeWithMetadata = {
-          points: strokeData.points,
-          tool: currentToolRef.current,
-          id: strokeData.id,
+    const strokeData = clearLocalStroke();
+    if (strokeData.points.length > 0) {
+      const strokeWithMetadata = {
+        points: strokeData.points,
+        tool: currentToolRef.current,
+        id: strokeData.id,
+        userId: myUserId.current,
+        width: penWidth.current,
+        color: colorRef.current,
+      };
+
+      addCompletedStroke(strokeWithMetadata);
+      addToHistory();
+
+      client.publish({
+        destination: "/app/add.strokes",
+        body: JSON.stringify({
+          currentStrokes: strokeData.points,
+          strokeId: strokeData.id,
           userId: myUserId.current,
-          width: penWidth.current, // Added width
-          color: colorRef.current, // Added color
-        };
-
-        addCompletedStroke(strokeWithMetadata);
-        addToHistory();
-
-        //send to network
-        client.publish({
-          destination: "/app/add.strokes",
-          body: JSON.stringify({
-            currentStrokes: strokeData.points,
-            strokeId: strokeData.id,
-            userId: myUserId.current,
-            tool: currentToolRef.current,
-            width: penWidth.current, // Added width
-            color: colorRef.current, // Added color
-          }),
-        });
-      }
+          tool: currentToolRef.current,
+          width: penWidth.current,
+          color: colorRef.current,
+        }),
+      });
     }
 
     scheduleRedraw();
@@ -487,6 +489,7 @@ export default function CanvasManager({ isDarkMode }) {
     colorRef,
   ]);
 
+  const lastEventTime = useRef(0);
   return (
     <>
       <DrawOptions
@@ -495,6 +498,7 @@ export default function CanvasManager({ isDarkMode }) {
         penWidth={penWidth}
         colorRef={colorRef}
         scheduleRedraw={scheduleRedraw}
+        canvasRef={canvasRef}
       />
       <CanvasDraw
         isPanning={isPanning}

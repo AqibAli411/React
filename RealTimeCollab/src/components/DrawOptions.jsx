@@ -15,6 +15,7 @@ export const STROKE_OPTIONS = {
 function DrawOptions({
   isDarkMode,
   currentToolRef,
+  canvasRef,
   penWidth,
   colorRef,
   scheduleRedraw,
@@ -29,10 +30,22 @@ function DrawOptions({
 
   //if showColorPicker is false then user has not selected any color show acc to theme
   // showColorPicker ? colorRef.current : isDarkMode ? "#ffffff" : "#000000"
-  //
-
   const widthDropdownRef = useRef(null);
   const colorDropdownRef = useRef(null);
+
+  useEffect(
+    function () {
+      scheduleRedraw();
+      if (selectedColor !== "#000000" && selectedColor !== "#ffffff") return;
+
+      colorRef.current = isDarkMode ? "#ffffff" : "#000000";
+
+      setSelectedColor(colorRef.current);
+
+      return () => scheduleRedraw();
+    },
+    [isDarkMode, colorRef, showColorPicker, selectedColor, scheduleRedraw],
+  );
 
   // Preset color palette
   const presetColors = [
@@ -75,9 +88,10 @@ function DrawOptions({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    const node = canvasRef.current;
+    node.addEventListener("pointerdown", handleClickOutside);
+    return () => node.removeEventListener("pointerdown", handleClickOutside);
+  }, [canvasRef]);
 
   const tools = useMemo(
     () => [
