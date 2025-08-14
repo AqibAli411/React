@@ -1,6 +1,13 @@
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle";
 
-function ModeHeader({ mode, onSetMode, isDarkMode, setIsDarkMode }) {
+function ModeHeader({
+  mode,
+  onSetMode,
+  isDarkMode,
+  setIsDarkMode,
+  roomId,
+  name,
+}) {
   return (
     <header className="flex justify-between border-b border-gray-300 bg-white p-2 dark:border-gray-700 dark:bg-neutral-900">
       {/* Logo Section */}
@@ -45,7 +52,7 @@ function ModeHeader({ mode, onSetMode, isDarkMode, setIsDarkMode }) {
         <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
         <div className="flex items-center gap-2">
           <div className="hidden text-sm text-gray-800 sm:block dark:text-gray-200">
-            Aqib Ali
+            {name}
           </div>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 font-semibold text-blue-50 dark:from-blue-500 dark:to-blue-700">
             AA

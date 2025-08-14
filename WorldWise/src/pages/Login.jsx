@@ -19,6 +19,7 @@ export default function Login() {
 
   useEffect(
     function () {
+      // by replace prop we just skip the login if we go back
       if (isAuth) navigate("/app", { replace: true });
     },
     [isAuth, navigate]

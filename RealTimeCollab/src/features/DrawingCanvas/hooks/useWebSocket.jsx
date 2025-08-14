@@ -2,28 +2,26 @@ import { Client } from "@stomp/stompjs";
 import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 
-function useWebSocket(onDraw, onStop, subUndo, onErase) {
+function useWebSocket(onMessage, subUndo, roomId) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
 
   // Keep latest callbacks in refs so we don't break effect dependencies
-  const onDrawRef = useRef(onDraw);
-  const onStopRef = useRef(onStop);
+  const onMessageRef = useRef(onMessage);
   const subUndoRef = useRef(subUndo);
-  const onEraseRef = useRef(onErase);
+  const roomIdRef = useRef(roomId);
 
   useEffect(() => {
-    onDrawRef.current = onDraw;
-  }, [onDraw]);
-  useEffect(() => {
-    onStopRef.current = onStop;
-  }, [onStop]);
+    roomIdRef.current = roomId;
+  }, [roomId]);
+
   useEffect(() => {
     subUndoRef.current = subUndo;
   }, [subUndo]);
+  
   useEffect(() => {
-    onEraseRef.current = onErase;
-  }, [onErase]);
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
     const client = new Client({
@@ -38,17 +36,11 @@ function useWebSocket(onDraw, onStop, subUndo, onErase) {
       console.log("connected", frame);
       setConnected(true);
 
-      client.subscribe("/topic/draw/start", (message) =>
-        onDrawRef.current(message),
-      );
-      client.subscribe("/topic/draw/stop", (message) =>
-        onStopRef.current(message),
-      );
       client.subscribe("/topic/draw/undo", (message) =>
         subUndoRef.current(message),
       );
-      client.subscribe("/topic/draw/erase", (message) =>
-        onEraseRef.current(message),
+      client.subscribe(`/topic/room.${roomIdRef.current}`, (message) =>
+        onMessageRef.current(message),
       );
     };
 
@@ -64,7 +56,7 @@ function useWebSocket(onDraw, onStop, subUndo, onErase) {
         clientRef.current.deactivate();
       }
     };
-  }, []); 
+  }, []);
   return { connected, client: clientRef.current };
 }
 

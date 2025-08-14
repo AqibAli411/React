@@ -10,6 +10,7 @@ import {
   LogIn,
   Sparkles,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function RoomPage() {
   const [name, setName] = useState("");
@@ -22,12 +23,14 @@ export default function RoomPage() {
   const [nameError, setNameError] = useState("");
   const [roomIdError, setRoomIdError] = useState("");
 
+  const navigate = useNavigate();
+
   // Auto-generate room ID when switching to create mode
   useEffect(() => {
     if (isCreating && !roomId) {
       generateRoomId();
     }
-  }, [isCreating]);
+  }, [isCreating, roomId]);
 
   const generateRoomId = async () => {
     setIsGenerating(true);
@@ -75,20 +78,51 @@ export default function RoomPage() {
     return true;
   };
 
-  const handleCreate = () => {
+  function randomNumber() {
+    return Math.round(Math.random() * 1000 + 1);
+  }
+
+  const url = "http://localhost:8080/api/room";
+
+  const handleCreate = async () => {
     if (!validateName(name)) return;
-    console.log(`Creating room ${roomId} for ${name}`);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: roomId,
+        userid: randomNumber(),
+        username: name,
+      }),
+    });
+
+    const { id, username, userid } = await response.json();
+
+    navigate(`/room/${id}?name=${username}&id=${userid}`);
     // Add success animation or navigation here
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!validateName(name) || !validateRoomId(joinRoomId)) return;
-    console.log(`${name} joining room ${joinRoomId}`);
-    // Add success animation or navigation here
+
+    try {
+      const response = await fetch(`${url}/${joinRoomId}`);
+
+      if (!response.ok) throw new Error("Room cannot be found!");
+
+      const { id, userid } = await response.json();
+
+      navigate(`/room/${id}?name=${name}&id=${randomNumber()}`);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const handleBack = () => {
-    console.log("Going back to previous page");
+    navigate(-1);
   };
 
   const toggleTheme = () => {
@@ -186,7 +220,6 @@ export default function RoomPage() {
           >
             {isCreating ? "Create Room" : "Join Room"}
           </h1>
-        
         </div>
 
         {/* Mode Toggle */}
@@ -311,7 +344,7 @@ export default function RoomPage() {
               <button
                 onClick={handleCreate}
                 disabled={isGenerating || !name.trim()}
-                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:tranneutral-y-0 disabled:hover:scale-100`}
+                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 disabled:hover:tranneutral-y-0 cursor-pointer hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
               >
                 <span className="flex items-center justify-center gap-2">
                   <Users size={20} />
@@ -358,10 +391,10 @@ export default function RoomPage() {
               <button
                 onClick={handleJoin}
                 disabled={!name.trim() || !joinRoomId.trim()}
-                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:tranneutral-y-0 disabled:hover:scale-100`}
+                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 disabled:hover:tranneutral-y-0 cursor-pointer hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
               >
                 <span className="flex items-center justify-center gap-2">
-                  <LogIn size={20} />
+                  <Users size={20} />
                   Join Room
                 </span>
               </button>

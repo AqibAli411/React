@@ -9,7 +9,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import CanvasDraw from "./CanvasDraw";
 import DrawOptions from "../../components/DrawOptions";
 
-export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
+export default function CanvasManager({ isDarkMode, roomId, user }) {
   const canvasRef = useRef(null);
   const containerRef = useRef();
   const ctxRef = useRef(null);
@@ -94,142 +94,130 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
     [undo],
   );
 
-
-  
-
-  //one method having different cases for type
-  //if type is "clear" then only clear ones runs
-
-  const onMessage = useCallback(
+  const onDraw = useCallback(
     (message) => {
       if (!isMounted.current) return;
-      const parsedMessage = JSON.parse(message.body);
-      switch (parsedMessage.type) {
-        case "stroke_move":
-          try {
-            const { payload, userId: userWhoDraw } = parsedMessage;
-            console.log("here we are though");
-            const {
-              x,
-              y,
-              pressure,
-              strokeId: incomingStrokeId,
-              tool,
-              width,
-              color,
-            } = payload;
 
-            //doesn't run for one actually drawing ( doesn't run locally)
-            if (Number(userId) === Number(userWhoDraw)) return;
-            //for identification of each stroke we define its id -> strokeId
-            if (!liveStrokes.current.has(incomingStrokeId)) {
-              liveStrokes.current.set(incomingStrokeId, {
-                points: [],
-                userId,
-                tool: tool || "pen",
-                width: width || 2, // Added width
-                color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
-                lastUpdate: performance.now(),
-              });
-            }
+      try {
+        const {
+          x,
+          y,
+          pressure,
+          strokeId: incomingStrokeId,
+          userId,
+          tool,
+          width,
+          color,
+        } = JSON.parse(message.body);
+        //doesn't run for one actually drawing ( doesn't run locally)
+        if (userId === myUserId.current) return;
 
-            const strokeData = liveStrokes.current.get(incomingStrokeId);
-            strokeData.points.push([x, y, pressure]);
-            strokeData.lastUpdate = performance.now();
+        //for identification of each stroke we define its id -> strokeId
+        if (!liveStrokes.current.has(incomingStrokeId)) {
+          liveStrokes.current.set(incomingStrokeId, {
+            points: [],
+            userId: userId,
+            tool: tool || "pen",
+            width: width || 2, // Added width
+            color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
+            lastUpdate: performance.now(),
+          });
+        }
 
-            console.log("for other one");
+        const strokeData = liveStrokes.current.get(incomingStrokeId);
+        strokeData.points.push([x, y, pressure]);
+        strokeData.lastUpdate = performance.now();
 
-            scheduleRedraw();
-          } catch (error) {
-            console.error("Error parsing draw message:", error);
-          }
-          break;
-        case "stroke_end":
-          try {
-            const {
-              payload,
-              userId: userWhoDraw, // Added color
-            } = parsedMessage;
+        scheduleRedraw();
+      } catch (error) {
+        console.error("Error parsing draw message:", error);
+      }
+    },
+    [scheduleRedraw, myUserId, liveStrokes, isDarkMode],
+  );
 
-            const {
-              currentStrokes,
-              strokeId: completedStrokeId,
-              tool,
-              width, // Added width
-              color,
-            } = payload;
+  // In the onStop callback, update to handle width and color:
+  const onStop = useCallback(
+    (message) => {
+      if (!isMounted.current) return;
 
-            if (liveStrokes.current.has(completedStrokeId)) {
-              liveStrokes.current.delete(completedStrokeId);
-            }
+      try {
+        const {
+          currentStrokes,
+          strokeId: completedStrokeId,
+          userId,
+          tool,
+          width, // Added width
+          color, // Added color
+        } = JSON.parse(message.body);
 
-            if (
-              Number(userId) !== Number(userWhoDraw) &&
-              currentStrokes &&
-              currentStrokes.length > 0
-            ) {
-              const strokeWithMetadata = {
-                points: currentStrokes,
-                tool: tool || "pen",
-                id: completedStrokeId,
-                userId: userId,
-                width: width || 2, // Added width
-                color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
-              };
-              console.log(strokeWithMetadata.color);
-              addCompletedStroke(strokeWithMetadata);
-              addToHistory(); // Add to undo history
-            }
+        if (liveStrokes.current.has(completedStrokeId)) {
+          liveStrokes.current.delete(completedStrokeId);
+        }
 
-            scheduleRedraw();
-          } catch (error) {
-            console.error("Error parsing stop message:", error);
-          }
-          break;
-        case "clear":
-          try {
-            const { payload, userId: userWhoDraw } = parsedMessage;
-            const { erasedStrokes } = payload;
-            console.log("are you running this");
+        if (
+          Number(userId) !== Number(myUserId.current) &&
+          currentStrokes &&
+          currentStrokes.length > 0
+        ) {
+          const strokeWithMetadata = {
+            points: currentStrokes,
+            tool: tool || "pen",
+            id: completedStrokeId,
+            userId: userId,
+            width: width || 2, // Added width
+            color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
+          };
+          console.log(strokeWithMetadata.color);
+          addCompletedStroke(strokeWithMetadata);
+          addToHistory(); // Add to undo history
+        }
 
-            // Don't process our own erase messages (already handled locally)
-            if (Number(userId) === Number(userWhoDraw)) {
-              return;
-            }
-
-            if (erasedStrokes.length > 0) {
-              // Remove erased strokes from completed strokes for other users
-              erasedStrokes.forEach((strokeId) => {
-                completedStrokes.current = completedStrokes.current.filter(
-                  (s) => s.id !== strokeId,
-                );
-              });
-              addToHistory(); // Add to undo history
-            }
-            scheduleRedraw();
-          } catch (error) {
-            console.error("Error parsing erase message:", error);
-          }
-          break;
-
-        default:
-          break;
+        scheduleRedraw();
+      } catch (error) {
+        console.error("Error parsing stop message:", error);
       }
     },
     [
       scheduleRedraw,
       liveStrokes,
-      isDarkMode,
-      userId,
+      myUserId,
       addCompletedStroke,
       addToHistory,
-      completedStrokes,
+      isDarkMode,
     ],
   );
 
-  // In the onStop callback, update to handle width and color:
+  const onErase = useCallback(
+    (message) => {
+      if (!isMounted.current) return;
 
-  const { client } = useWebSocket(onMessage, subUndo, roomId);
+      try {
+        const { erasedStrokes, userId } = JSON.parse(message.body);
+
+        // Don't process our own erase messages (already handled locally)
+        if (Number(userId) === Number(myUserId.current)) {
+          return;
+        }
+
+        if (erasedStrokes.length > 0) {
+          // Remove erased strokes from completed strokes for other users
+          erasedStrokes.forEach((strokeId) => {
+            completedStrokes.current = completedStrokes.current.filter(
+              (s) => s.id !== strokeId,
+            );
+          });
+          addToHistory(); // Add to undo history
+        }
+        scheduleRedraw();
+      } catch (error) {
+        console.error("Error parsing erase message:", error);
+      }
+    },
+    [completedStrokes, scheduleRedraw, myUserId, addToHistory],
+  );
+
+  const { client } = useWebSocket(onDraw, onStop, subUndo, onErase);
 
   // Set mounted flag
   useEffect(() => {
@@ -313,20 +301,17 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       if (currentToolRef.current === "eraser") {
         // FIXED: Eraser doesn't need drawing state
         const erasedStrokes = startErasing(point);
+
         // Always trigger redraw for immediate visual feedback
         scheduleRedraw();
 
         // Send to network only if strokes were actually erased
         if (erasedStrokes.length > 0) {
           client.publish({
-            destination: `/app/room/${roomId}/msg`,
+            destination: "/app/erase.strokes",
             body: JSON.stringify({
-              type: "clear",
-              roomId,
-              userId,
-              payload: {
-                erasedStrokes,
-              },
+              erasedStrokes,
+              userId: myUserId.current,
             }),
           });
         }
@@ -335,20 +320,16 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
         scheduleRedraw();
 
         client.publish({
-          destination: `/app/room/${roomId}/msg`,
+          destination: "/app/draw.points",
           body: JSON.stringify({
-            type: "stroke_move",
-            roomId,
-            userId,
-            payload: {
-              x: point[0],
-              y: point[1],
-              pressure: point[2],
-              strokeId: newStrokeId,
-              tool: currentToolRef.current,
-              width: penWidth.current,
-              color: colorRef.current,
-            },
+            x: point[0],
+            y: point[1],
+            pressure: point[2],
+            strokeId: newStrokeId,
+            userId: myUserId.current,
+            tool: currentToolRef.current,
+            width: penWidth.current,
+            color: colorRef.current,
           }),
         });
       }
@@ -361,12 +342,10 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       startErasing,
       startNewStroke,
       scheduleRedraw,
-      // myUserId,
+      myUserId,
       isPanning,
       penWidth,
       colorRef,
-      roomId,
-      userId,
     ],
   );
 
@@ -397,14 +376,10 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
         // Send to network only if strokes were actually erased
         if (erasedStrokes.length > 0) {
           client.publish({
-            destination: `/app/room/${roomId}/msg`,
+            destination: "/app/erase.strokes",
             body: JSON.stringify({
-              type: "clear",
-              roomId,
-              userId,
-              payload: {
-                erasedStrokes,
-              },
+              erasedStrokes,
+              userId: myUserId.current,
             }),
           });
         }
@@ -419,20 +394,16 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
         if (now - lastEventTime.current >= 16) {
           lastEventTime.current = now;
           client.publish({
-            destination: `/app/room/${roomId}/msg`,
+            destination: "/app/draw.points",
             body: JSON.stringify({
-              type: "stroke_move",
-              roomId,
-              userId,
-              payload: {
-                x: point[0],
-                y: point[1],
-                pressure: point[2],
-                strokeId: currentStrokeId.current,
-                tool: currentToolRef.current,
-                width: penWidth.current,
-                color: colorRef.current,
-              },
+              x: point[0],
+              y: point[1],
+              pressure: point[2],
+              strokeId: currentStrokeId.current,
+              userId: myUserId.current,
+              tool: currentToolRef.current,
+              width: penWidth.current,
+              color: colorRef.current,
             }),
           });
         }
@@ -448,12 +419,10 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       continueErasing,
       addPointToStroke,
       scheduleRedraw,
-      // myUserId,
+      myUserId,
       currentStrokeId,
       penWidth,
       colorRef,
-      roomId,
-      userId,
     ],
   );
 
@@ -481,8 +450,8 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       const strokeWithMetadata = {
         points: strokeData.points,
         tool: currentToolRef.current,
-        userId,
         id: strokeData.id,
+        userId: myUserId.current,
         width: penWidth.current,
         color: colorRef.current,
       };
@@ -491,18 +460,14 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       addToHistory();
 
       client.publish({
-        destination: `/app/room/${roomId}/msg`,
+        destination: "/app/add.strokes",
         body: JSON.stringify({
-          type: "stroke_end",
-          roomId,
-          userId,
-          payload: {
-            currentStrokes: strokeData.points,
-            strokeId: strokeData.id,
-            tool: currentToolRef.current,
-            width: penWidth.current,
-            color: colorRef.current,
-          },
+          currentStrokes: strokeData.points,
+          strokeId: strokeData.id,
+          userId: myUserId.current,
+          tool: currentToolRef.current,
+          width: penWidth.current,
+          color: colorRef.current,
         }),
       });
     }
@@ -519,10 +484,9 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
     addCompletedStroke,
     addToHistory,
     scheduleRedraw,
+    myUserId,
     penWidth,
     colorRef,
-    roomId,
-    userId,
   ]);
 
   const lastEventTime = useRef(0);
