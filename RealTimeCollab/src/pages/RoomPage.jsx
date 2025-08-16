@@ -84,6 +84,7 @@ export default function RoomPage() {
 
   const url = "http://localhost:8080/api/room";
 
+  //handles create functionality of rooom
   const handleCreate = async () => {
     if (!validateName(name)) return;
 
@@ -105,6 +106,8 @@ export default function RoomPage() {
     // Add success animation or navigation here
   };
 
+  
+  //handles join functionality of rooom
   const handleJoin = async () => {
     if (!validateName(name) || !validateRoomId(joinRoomId)) return;
 
@@ -120,6 +123,8 @@ export default function RoomPage() {
       console.log(err);
     }
   };
+
+
 
   const handleBack = () => {
     navigate(-1);
@@ -142,9 +147,6 @@ export default function RoomPage() {
     ? "bg-neutral-900"
     : "bg-gradient-to-br from-blue-50 via-white to-neutral-50";
 
-  const cardClasses = isDarkMode
-    ? "bg-neutral-800/90 backdrop-blur-sm border border-neutral-700/50 shadow-2xl shadow-blue-500/10"
-    : "bg-white/80 backdrop-blur-sm border border-white/20 shadow-2xl shadow-blue-500/10";
 
   const inputClasses = isDarkMode
     ? "bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700"
@@ -174,15 +176,7 @@ export default function RoomPage() {
     <div
       className={`flex min-h-screen items-center justify-center px-4 py-8 ${themeClasses}`}
     >
-      {/* Decorative Elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className={`absolute top-20 left-20 h-32 w-32 rounded-full opacity-20 blur-3xl ${isDarkMode ? "bg-blue-500" : "bg-blue-300"}`}
-        ></div>
-        <div
-          className={`absolute right-20 bottom-20 h-40 w-40 rounded-full opacity-20 blur-3xl ${isDarkMode ? "bg-neutral-500" : "bg-neutral-300"}`}
-        ></div>
-      </div>
+     
 
       {/* Header Controls */}
       <div className="absolute top-6 right-6 left-6 z-10 flex items-center justify-between">
@@ -204,7 +198,7 @@ export default function RoomPage() {
 
       {/* Main Card */}
       <div
-        className={`relative w-full max-w-lg rounded-3xl p-8 ${cardClasses}`}
+        className={`relative w-full max-w-lg rounded-3xl p-8 border border-gray-300`}
       >
         {/* Header */}
         <div className="mb-8 text-center">
@@ -327,7 +321,7 @@ export default function RoomPage() {
                       <button
                         onClick={copyToClipboard}
                         disabled={isGenerating}
-                        className={`rounded-xl p-3 transition-all duration-200 ${
+                          className={`rounded-xl p-3 transition-all duration-200 ${
                           copied
                             ? "bg-green-500 text-white"
                             : buttonSecondaryClasses

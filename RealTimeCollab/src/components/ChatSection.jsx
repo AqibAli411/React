@@ -150,7 +150,7 @@ function ChatSection() {
   const currentChats = isAiMode ? [aiChat] : contacts;
 
   return (
-    <div className="mx-auto flex border-r border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+    <div className="flex border-r border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
       {/* Sidebar */}
       <div
         className={`flex flex-col ${isCompact ? "items-center" : ""} overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-neutral-900 ${
