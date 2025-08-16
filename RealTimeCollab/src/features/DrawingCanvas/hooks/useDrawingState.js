@@ -3,13 +3,11 @@ import { useRef, useCallback } from "react";
 
 export function useDrawingState() {
   const isDrawing = useRef(false);
-  const currentToolRef = useRef("pen");
 
   // Multi-user stroke management
   const myStroke = useRef([]);
   const liveStrokes = useRef(new Map());
   const completedStrokes = useRef([]);
-  const myUserId = useRef(0);
 
   // Stroke tracking
   const strokeId = useRef(0);
@@ -21,7 +19,6 @@ export function useDrawingState() {
     //a sort of variable that we can use to generate a random number each time
     strokeId.current += 1; //starting with 1
     currentStrokeId.current = strokeId.current;
-    myUserId.current = Number(strokeId.current);
 
     myStroke.current = [point];
     lastPoint.current = point;
@@ -70,11 +67,9 @@ export function useDrawingState() {
 
   return {
     isDrawing,
-    currentToolRef,
     myStroke,
     liveStrokes,
     completedStrokes,
-    myUserId,
     strokeId,
     currentStrokeId,
     addCompletedStroke,

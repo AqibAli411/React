@@ -1,7 +1,7 @@
 // hooks/useEraser.js
 import { useRef, useCallback } from "react";
 
-export function useEraser(completedStrokes, isDrawing) {
+export function useEraser(completedStrokes) {
   // FIXED: Separate eraser state from drawing state
   const isErasing = useRef(false);
   const eraserSize = useRef(20);
@@ -145,7 +145,6 @@ export function useEraser(completedStrokes, isDrawing) {
         }
       });
 
-      // FIXED: Remove strokes locally immediately
       if (strokesToErase.length > 0) {
         removeStrokesLocally(strokesToErase);
       }

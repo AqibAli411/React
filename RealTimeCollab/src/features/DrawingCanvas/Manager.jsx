@@ -8,8 +8,9 @@ import { useInfiniteCanvas } from "./hooks/useInfiniteCanvas";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import CanvasDraw from "./CanvasDraw";
 import DrawOptions from "../../components/DrawOptions";
+import SimpleEditor from "../TextEditor/components/tiptap-templates/simple/simple-editor";
 
-export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
+export default function Manager({ isDarkMode, roomId, id: userId, mode }) {
   const canvasRef = useRef(null);
   const containerRef = useRef();
   const ctxRef = useRef(null);
@@ -17,15 +18,14 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
   const isDownPressed = useRef(false);
   const penWidth = useRef(2);
   const colorRef = useRef(isDarkMode ? "#000000" : "#ffffff");
+  const currentToolRef = useRef("pen");
 
   // Initialize drawing state management
   const {
     isDrawing,
-    currentToolRef,
     myStroke,
     liveStrokes,
     completedStrokes,
-    myUserId,
     currentStrokeId,
     addCompletedStroke,
     clearLocalStroke,
@@ -94,9 +94,6 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
     [undo],
   );
 
-
-  
-
   //one method having different cases for type
   //if type is "clear" then only clear ones runs
 
@@ -107,18 +104,13 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       switch (parsedMessage.type) {
         case "stroke_move":
           try {
-            const { payload, userId: userWhoDraw } = parsedMessage;
-            console.log("here we are though");
             const {
-              x,
-              y,
-              pressure,
+              payload,
+              userId: userWhoDraw,
               strokeId: incomingStrokeId,
-              tool,
-              width,
-              color,
-            } = payload;
+            } = parsedMessage;
 
+            const { x, y, pressure, tool, width, color } = payload;
             //doesn't run for one actually drawing ( doesn't run locally)
             if (Number(userId) === Number(userWhoDraw)) return;
             //for identification of each stroke we define its id -> strokeId
@@ -128,7 +120,7 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
                 userId,
                 tool: tool || "pen",
                 width: width || 2, // Added width
-                color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
+                color: color,
                 lastUpdate: performance.now(),
               });
             }
@@ -136,8 +128,6 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
             const strokeData = liveStrokes.current.get(incomingStrokeId);
             strokeData.points.push([x, y, pressure]);
             strokeData.lastUpdate = performance.now();
-
-            console.log("for other one");
 
             scheduleRedraw();
           } catch (error) {
@@ -149,11 +139,11 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
             const {
               payload,
               userId: userWhoDraw, // Added color
+              strokeId: completedStrokeId,
             } = parsedMessage;
 
             const {
               currentStrokes,
-              strokeId: completedStrokeId,
               tool,
               width, // Added width
               color,
@@ -176,7 +166,6 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
                 width: width || 2, // Added width
                 color: color || (isDarkMode ? "#ffffff" : "#000000"), // Added color
               };
-              console.log(strokeWithMetadata.color);
               addCompletedStroke(strokeWithMetadata);
               addToHistory(); // Add to undo history
             }
@@ -190,7 +179,6 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
           try {
             const { payload, userId: userWhoDraw } = parsedMessage;
             const { erasedStrokes } = payload;
-            console.log("are you running this");
 
             // Don't process our own erase messages (already handled locally)
             if (Number(userId) === Number(userWhoDraw)) {
@@ -228,18 +216,37 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
   );
 
   // In the onStop callback, update to handle width and color:
+  const { client } = useWebSocket([
+    { topic: `/topic/room.${roomId}`, handler: onMessage },
+  ]);
 
-  const { client } = useWebSocket(onMessage, subUndo, roomId);
-
-  // Set mounted flag
+  // Set mounted flag and fetches inital data from backend
   useEffect(() => {
     isMounted.current = true;
-    scheduleRedraw();
+
+    async function fetchStrokes() {
+      const response = await fetch("http://localhost:8080/api/draw");
+      const result = await response.json();
+
+      for (const fetchedObject of result) {
+        const points = fetchedObject.payload.currentStrokes;
+        const strokeWithMetadata = {
+          id: fetchedObject.id,
+          ...fetchedObject.payload,
+          points,
+        };
+        addCompletedStroke(strokeWithMetadata);
+        if (points) addToHistory();
+        scheduleRedraw();
+      }
+    }
+
+    fetchStrokes();
 
     return () => {
       isMounted.current = false;
     };
-  }, [scheduleRedraw, isDarkMode]);
+  }, [scheduleRedraw, isDarkMode, addCompletedStroke, addToHistory]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -266,7 +273,7 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
 
     // Initial draw
     resizeCanvas();
-    drawGrid();
+
     // Observe container changes
     const observer = new ResizeObserver(resizeCanvas);
     observer.observe(canvas.parentElement); // or the wrapping container
@@ -274,7 +281,7 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
     return () => {
       observer.disconnect();
     };
-  }, [scheduleRedraw, drawGrid]);
+  }, [scheduleRedraw, drawGrid, addCompletedStroke, addToHistory]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -333,18 +340,17 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       } else {
         const newStrokeId = startNewStroke(point);
         scheduleRedraw();
-
         client.publish({
           destination: `/app/room/${roomId}/msg`,
           body: JSON.stringify({
             type: "stroke_move",
             roomId,
             userId,
+            strokeId: newStrokeId,
             payload: {
               x: point[0],
               y: point[1],
               pressure: point[2],
-              strokeId: newStrokeId,
               tool: currentToolRef.current,
               width: penWidth.current,
               color: colorRef.current,
@@ -424,11 +430,11 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
               type: "stroke_move",
               roomId,
               userId,
+              strokeId: currentStrokeId.current,
               payload: {
                 x: point[0],
                 y: point[1],
                 pressure: point[2],
-                strokeId: currentStrokeId.current,
                 tool: currentToolRef.current,
                 width: penWidth.current,
                 color: colorRef.current,
@@ -448,7 +454,6 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
       continueErasing,
       addPointToStroke,
       scheduleRedraw,
-      // myUserId,
       currentStrokeId,
       penWidth,
       colorRef,
@@ -496,9 +501,9 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
           type: "stroke_end",
           roomId,
           userId,
+          strokeId: strokeData.id,
           payload: {
             currentStrokes: strokeData.points,
-            strokeId: strokeData.id,
             tool: currentToolRef.current,
             width: penWidth.current,
             color: colorRef.current,
@@ -527,29 +532,40 @@ export default function CanvasManager({ isDarkMode, roomId, id: userId }) {
 
   const lastEventTime = useRef(0);
   return (
-    <>
-      <DrawOptions
-        isDarkMode={isDarkMode}
-        currentToolRef={currentToolRef}
-        penWidth={penWidth}
-        colorRef={colorRef}
-        scheduleRedraw={scheduleRedraw}
-        canvasRef={canvasRef}
-      />
-      <CanvasDraw
-        isPanning={isPanning}
-        currentToolRef={currentToolRef}
-        canvasRef={canvasRef}
-        handlePointerDown={handlePointerDown}
-        handlePointerMove={handlePointerMove}
-        handlePointerUp={handlePointerUp}
-        zoomIn={zoomIn}
-        zoomOut={zoomOut}
-        scheduleRedraw={scheduleRedraw}
-        getCanvasPoint={getCanvasPoint}
-        isDownPressed={isDownPressed}
-        ref={containerRef}
-      />
-    </>
+    <div className="flex flex-3">
+      <div
+        className={`${mode === "text" ? "block" : "hidden"} flex-3 overflow-auto`}
+      >
+        <div className={`simple-editor-wrapper`}>
+          <SimpleEditor roomId={roomId} userId={userId} />
+        </div>
+      </div>
+      <div
+        className={`relative flex-3 ${mode === "canvas" ? "block" : "hidden"}`}
+      >
+        <DrawOptions
+          isDarkMode={isDarkMode}
+          currentToolRef={currentToolRef}
+          penWidth={penWidth}
+          colorRef={colorRef}
+          scheduleRedraw={scheduleRedraw}
+          canvasRef={canvasRef}
+        />
+        <CanvasDraw
+          isPanning={isPanning}
+          currentToolRef={currentToolRef}
+          canvasRef={canvasRef}
+          handlePointerDown={handlePointerDown}
+          handlePointerMove={handlePointerMove}
+          handlePointerUp={handlePointerUp}
+          zoomIn={zoomIn}
+          zoomOut={zoomOut}
+          scheduleRedraw={scheduleRedraw}
+          getCanvasPoint={getCanvasPoint}
+          isDownPressed={isDownPressed}
+          ref={containerRef}
+        />
+      </div>
+    </div>
   );
 }

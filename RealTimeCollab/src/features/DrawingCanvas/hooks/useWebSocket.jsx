@@ -2,26 +2,16 @@ import { Client } from "@stomp/stompjs";
 import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 
-function useWebSocket(onMessage, subUndo, roomId) {
+function useWebSocket(subscriptions) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
+  const subsRef = useRef(subscriptions);
 
-  // Keep latest callbacks in refs so we don't break effect dependencies
-  const onMessageRef = useRef(onMessage);
-  const subUndoRef = useRef(subUndo);
-  const roomIdRef = useRef(roomId);
 
   useEffect(() => {
-    roomIdRef.current = roomId;
-  }, [roomId]);
+    subsRef.current = subscriptions;
+  }, [subscriptions]);
 
-  useEffect(() => {
-    subUndoRef.current = subUndo;
-  }, [subUndo]);
-  
-  useEffect(() => {
-    onMessageRef.current = onMessage;
-  }, [onMessage]);
 
   useEffect(() => {
     const client = new Client({
@@ -32,18 +22,13 @@ function useWebSocket(onMessage, subUndo, roomId) {
       debug: (str) => console.log("STOMP:", str),
     });
 
-    client.onConnect = (frame) => {
-      console.log("connected", frame);
+    client.onConnect = () => {
       setConnected(true);
-
-      client.subscribe("/topic/draw/undo", (message) =>
-        subUndoRef.current(message),
-      );
-      client.subscribe(`/topic/room.${roomIdRef.current}`, (message) =>
-        onMessageRef.current(message),
-      );
+      subsRef.current.forEach(({ topic, handler }) => {
+        client.subscribe(topic, handler);
+      });
     };
-
+    
     client.onDisconnect = () => {
       setConnected(false);
     };

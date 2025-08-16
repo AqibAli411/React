@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 
 const CanvasDraw = forwardRef(function CanvasDraw(
   {
@@ -34,7 +34,8 @@ const CanvasDraw = forwardRef(function CanvasDraw(
     const handleKeyUp = (e) => {
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
-        setIsGrabbing(true);
+        setIsGrabbing(false);
+        console.log("is grabbing false");
         return;
       }
     };
@@ -42,7 +43,8 @@ const CanvasDraw = forwardRef(function CanvasDraw(
     const handleKeyDown = (e) => {
       if (e.key === " " || e.code === "Space") {
         e.preventDefault();
-        setIsGrabbing(false);
+        console.log("is grabbing true");
+        setIsGrabbing(true);
         return;
       }
     };
@@ -50,10 +52,11 @@ const CanvasDraw = forwardRef(function CanvasDraw(
     if (!container) return;
     container.focus();
     container.addEventListener("wheel", handleWheel, { passive: false });
-    container.addEventListener("keydown", handleKeyUp);
-    container.addEventListener("keyup", handleKeyDown);
+    container.addEventListener("keydown", handleKeyDown);
+    container.addEventListener("keyup", handleKeyUp);
 
     return () => {
+      container.focus();
       container.removeEventListener("wheel", handleWheel);
       container.removeEventListener("keydown", handleKeyDown);
       container.removeEventListener("keyup", handleKeyUp);
@@ -74,16 +77,19 @@ const CanvasDraw = forwardRef(function CanvasDraw(
       <canvas
         ref={canvasRef}
         onPointerDown={(e) => {
+          console.log("is down true");
           SetIsMouseDown(true);
           handlePointerDown(e);
         }}
         onPointerUp={(e) => {
+          console.log("is down false");
+
           SetIsMouseDown(false);
           handlePointerUp(e);
         }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerUp}
-        className={`block h-full w-full touch-none bg-[#f8f9fa] dark:bg-neutral-900 select-none ${!isGrabbing ? "cursor-crosshair" : !isMouseDown ? "cursor-grab" : "cursor-grabbing"} `}
+        className={`block h-full w-full touch-none bg-[#f8f9fa] select-none dark:bg-neutral-900 ${!isGrabbing ? "cursor-crosshair" : !isMouseDown ? "cursor-grab" : "cursor-grabbing"} `}
       />
     </div>
   );

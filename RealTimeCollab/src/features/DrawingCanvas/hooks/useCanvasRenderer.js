@@ -1,5 +1,5 @@
 // hooks/useCanvasRenderer.js
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { drawStrokePoints } from "../utils/drawingUtils";
 
 export function useCanvasRenderer(
@@ -21,6 +21,22 @@ export function useCanvasRenderer(
   const animationFrameRef = useRef(null);
   const lastRenderTime = useRef(0);
   const RENDER_THROTTLE_MS = 8; // ~120fps
+  const isDarkRef = useRef(isDarkMode);
+  const toolRef = useRef(currentTool);
+
+  useEffect(
+    function () {
+      isDarkRef.current = isDarkMode;
+    },
+    [isDarkMode],
+  );
+
+  useEffect(
+    function () {
+      toolRef.current = currentTool.current;
+    },
+    [currentTool],
+  );
 
   // Draw grid for infinite canvas
   const drawGrid = useCallback(
@@ -42,7 +58,7 @@ export function useCanvasRenderer(
       const offsetY =
         ((transformRef.current.y % gridSize) + gridSize) % gridSize;
 
-      context.strokeStyle = isDarkMode ? "#333333" : "#dbd9d9";
+      context.strokeStyle = isDarkRef.current ? "#333333" : "#dbd9d9";
       context.lineWidth = 0.5;
       context.setLineDash([]);
 
@@ -64,7 +80,7 @@ export function useCanvasRenderer(
 
       context.restore();
     },
-    [transformRef, viewportRef, isDarkMode, ctxRef, canvasRef],
+    [transformRef, viewportRef, ctxRef, canvasRef],
   );
 
   // Apply canvas transformation
@@ -176,8 +192,12 @@ export function useCanvasRenderer(
         // Set stroke-specific color
         let strokeColor = stroke.color;
 
-        if (strokeColor === "#000000" && isDarkMode) strokeColor = "#ffffff";
-        if (strokeColor === "#ffffff" && !isDarkMode) strokeColor = "#000000";
+        //stroke is white and dark mode is on -> black
+        //stroke is black and dark mode is off -> white
+        if (strokeColor === "#000000" && isDarkRef.current)
+          strokeColor = "#ffffff";
+        if (strokeColor === "#ffffff" && !isDarkRef.current)
+          strokeColor = "#000000";
 
         ctx.fillStyle = strokeColor;
         ctx.strokeStyle = strokeColor;
@@ -197,11 +217,13 @@ export function useCanvasRenderer(
       if (strokeData && strokeData.points && strokeData.points.length > 0) {
         const tempStroke = { points: strokeData.points };
         if (isStrokeVisible(tempStroke)) {
-          // Set stroke-specific color for live strokes
-          let strokeColor = strokeData.color || colorRef.current;
+          // Set stroke-specific color for live strokes " || colorRef.current "
+          let strokeColor = strokeData.color;
 
-          if (strokeColor === "#000000" && isDarkMode) strokeColor = "#ffffff";
-          if (strokeColor === "#ffffff" && !isDarkMode) strokeColor = "#000000";
+          if (strokeColor === "#000000" && isDarkRef.current)
+            strokeColor = "#ffffff";
+          if (strokeColor === "#ffffff" && !isDarkRef.current)
+            strokeColor = "#000000";
 
           ctx.fillStyle = strokeColor;
           ctx.strokeStyle = strokeColor;
@@ -226,13 +248,15 @@ export function useCanvasRenderer(
 
       let color = colorRef.current;
 
-      if (color === "#000000" && isDarkMode) color = "#ffffff";
-      if (color === "#ffffff" && !isDarkMode) color = "#000000";
+      if (color === "#000000" && isDarkRef.current) color = "#ffffff";
+      if (color === "#ffffff" && !isDarkRef.current) color = "#000000";
+
+      console.log(toolRef.current);
 
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
 
-      drawStrokePoints(ctx, myStroke.current, currentTool, PEN_STROKES);
+      drawStrokePoints(ctx, myStroke.current, toolRef.current, PEN_STROKES);
     }
 
     // Reset transform for UI elements
@@ -265,7 +289,6 @@ export function useCanvasRenderer(
     liveStrokes,
     myStroke,
     isDrawing,
-    currentTool,
     transformRef,
     drawGrid,
     applyTransform,
@@ -273,7 +296,6 @@ export function useCanvasRenderer(
     isStrokeVisible,
     penWidth, // Added penWidth to dependencies
     colorRef,
-    isDarkMode,
   ]);
 
   const scheduleRedraw = useCallback(() => {

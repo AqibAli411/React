@@ -14,6 +14,8 @@ export function useUndoRedo(completedStrokes, scheduleRedraw) {
 
   const addToHistory = useCallback(() => {
     // Create a deep copy of current strokes
+    if (completedStrokes.current.length === 0) return;
+
     const snapshot = completedStrokes.current.map((stroke) => ({
       ...stroke,
       points: [...stroke.points],
@@ -49,7 +51,7 @@ export function useUndoRedo(completedStrokes, scheduleRedraw) {
         (stroke) => ({
           ...stroke,
           points: [...stroke.points],
-        })
+        }),
       );
     } else {
       completedStrokes.current = [];
@@ -69,7 +71,7 @@ export function useUndoRedo(completedStrokes, scheduleRedraw) {
       (stroke) => ({
         ...stroke,
         points: [...stroke.points],
-      })
+      }),
     );
 
     updateUndoRedoState();
