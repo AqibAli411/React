@@ -3,14 +3,10 @@ import { EditorContent, EditorContext, useEditor } from "@tiptap/react";
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit";
-import { Image } from "@tiptap/extension-image";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Typography } from "@tiptap/extension-typography";
 import { Highlight } from "@tiptap/extension-highlight";
-import { Subscript } from "@tiptap/extension-subscript";
-import { Superscript } from "@tiptap/extension-superscript";
-import { Selection } from "@tiptap/extensions";
 
 // --- UI Primitives ---
 import { Button } from "@/components/tiptap-ui-primitive/button";
@@ -20,24 +16,25 @@ import {
   ToolbarGroup,
   ToolbarSeparator,
 } from "@/components/tiptap-ui-primitive/toolbar";
+import "@/components/tiptap-node/heading-node/heading-node.scss";
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension";
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension";
+// Add these imports back (they were in old version):
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss";
 import "@/components/tiptap-node/code-block-node/code-block-node.scss";
 import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss";
 import "@/components/tiptap-node/list-node/list-node.scss";
 import "@/components/tiptap-node/image-node/image-node.scss";
-import "@/components/tiptap-node/heading-node/heading-node.scss";
 import "@/components/tiptap-node/paragraph-node/paragraph-node.scss";
 
 // --- Tiptap UI ---
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu";
-import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button";
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu";
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button";
 import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button";
+
 import {
   ColorHighlightPopover,
   ColorHighlightPopoverContent,
@@ -60,77 +57,73 @@ import { LinkIcon } from "@/components/tiptap-icons/link-icon";
 // --- Hooks ---
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWindowSize } from "@/hooks/use-window-size";
-import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
-import { useScrolling } from "@/hooks/use-scrolling";
-
-// --- Components ---
-
-// --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils";
 
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss";
 
 import content from "@/components/tiptap-templates/simple/data/content.json";
-import useWebSocket from "./useWebSocket";
+import useWebSocket from "../../../../DrawingCanvas/hooks/useWebSocket";
 
-// Memoized toolbar components to prevent unnecessary re-renders
+// Simplified debounce for publishing only
+function usePublishDebounce(callback, delay) {
+  const timeoutRef = React.useRef(null);
+  const callbackRef = React.useRef(callback);
+
+  React.useLayoutEffect(() => {
+    callbackRef.current = callback;
+  });
+
+  return React.useMemo(
+    () =>
+      (...args) => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(
+          () => callbackRef.current(...args),
+          delay,
+        );
+      },
+    [delay],
+  );
+}
+
+// Simplified toolbar - removed some heavy components
 const MainToolbarContent = React.memo(
-  ({ onHighlighterClick, onLinkClick, isMobile }) => {
-    return (
-      <>
-        <Spacer />
-        <ToolbarGroup>
-          <UndoRedoButton action="undo" />
-          <UndoRedoButton action="redo" />
-        </ToolbarGroup>
-        <ToolbarSeparator />
-        <ToolbarGroup>
-          <HeadingDropdownMenu levels={[1, 2, 3, 4]} portal={isMobile} />
-          <ListDropdownMenu
-            types={["bulletList", "orderedList", "taskList"]}
-            portal={isMobile}
-          />
-          <BlockquoteButton />
-          <CodeBlockButton />
-        </ToolbarGroup>
-        <ToolbarSeparator />
-        <ToolbarGroup>
-          <MarkButton type="bold" />
-          <MarkButton type="italic" />
-          <MarkButton type="strike" />
-          <MarkButton type="code" />
-          <MarkButton type="underline" />
-          {!isMobile ? (
-            <ColorHighlightPopover />
-          ) : (
-            <ColorHighlightPopoverButton onClick={onHighlighterClick} />
-          )}
-          {!isMobile ? <LinkPopover /> : <LinkButton onClick={onLinkClick} />}
-        </ToolbarGroup>
-        <ToolbarSeparator />
-        <ToolbarGroup>
-          <MarkButton type="superscript" />
-          <MarkButton type="subscript" />
-        </ToolbarGroup>
-        <ToolbarSeparator />
-        <ToolbarGroup>
-          <TextAlignButton align="left" />
-          <TextAlignButton align="center" />
-          <TextAlignButton align="right" />
-          <TextAlignButton align="justify" />
-        </ToolbarGroup>
-        <ToolbarSeparator />
-        <ToolbarGroup>
-          <ImageUploadButton text="Add" />
-        </ToolbarGroup>
-        <Spacer />
-        {isMobile && <ToolbarSeparator />}
-        <ToolbarGroup>
-        </ToolbarGroup>
-      </>
-    );
-  },
+  ({ onHighlighterClick, onLinkClick, isMobile }) => (
+    <>
+      <Spacer />
+      <ToolbarGroup>
+        <UndoRedoButton action="undo" />
+        <UndoRedoButton action="redo" />
+      </ToolbarGroup>
+      <ToolbarSeparator />
+      <ToolbarGroup>
+        <HeadingDropdownMenu levels={[1, 2, 3, 4]} portal={isMobile} />
+        <ListDropdownMenu
+          types={["bulletList", "orderedList"]}
+          portal={isMobile}
+        />
+        <BlockquoteButton />
+      </ToolbarGroup>
+      <ToolbarSeparator />
+      <ToolbarGroup>
+        <MarkButton type="bold" />
+        <MarkButton type="italic" />
+        <MarkButton type="strike" />
+        <MarkButton type="code" />
+        {!isMobile && <ColorHighlightPopover />}
+        {!isMobile ? <LinkPopover /> : <LinkButton onClick={onLinkClick} />}
+      </ToolbarGroup>
+      <ToolbarSeparator />
+      <ToolbarGroup>
+        <TextAlignButton align="left" />
+        <TextAlignButton align="center" />
+        <TextAlignButton align="right" />
+      </ToolbarGroup>
+      <Spacer />
+    </>
+  ),
 );
 
 const MobileToolbarContent = React.memo(({ type, onBack }) => (
@@ -145,9 +138,7 @@ const MobileToolbarContent = React.memo(({ type, onBack }) => (
         )}
       </Button>
     </ToolbarGroup>
-
     <ToolbarSeparator />
-
     {type === "highlighter" ? (
       <ColorHighlightPopoverContent />
     ) : (
@@ -156,306 +147,264 @@ const MobileToolbarContent = React.memo(({ type, onBack }) => (
   </>
 ));
 
-function SimpleEditor() {
+function SimpleEditor({ roomId, userId }) {
   const isMobile = useIsMobile();
   const windowSize = useWindowSize();
   const [mobileView, setMobileView] = React.useState("main");
-  const toolbarRef = React.useRef(null);
 
-  // Ref to track if component is mounted to prevent stale closures
-  const isMountedRef = React.useRef(false);
-
-  // Ref to track if we're currently updating from WebSocket to prevent feedback loops
-  const isUpdatingFromWebSocket = React.useRef(false);
-
-  // Debounce timer for WebSocket publishing
-  const publishTimeoutRef = React.useRef(null);
-
-  // Store last published content to prevent duplicate sends
-  const lastPublishedContent = React.useRef(null);
-
-  // Use ref to store editor instance for WebSocket callback
+  // Core refs
   const editorRef = React.useRef(null);
+  const isMountedRef = React.useRef(false);
+  const isUpdatingFromWSRef = React.useRef(false);
+  const lastPublishedContentRef = React.useRef("");
 
-  // Store current cursor position to preserve it during updates
-  const cursorPositionRef = React.useRef(null);
-
-  // Helper function to apply changes without losing cursor position
-  const applyContentChanges = React.useCallback((newContent) => {
-    if (!editorRef.current) return;
-
-    const editor = editorRef.current;
-
-    // Store current selection/cursor position
-    const currentSelection = editor.state.selection;
-    cursorPositionRef.current = {
-      from: currentSelection.from,
-      to: currentSelection.to,
-      anchor: currentSelection.anchor,
-      head: currentSelection.head,
-    };
-
-    // Get current content for comparison
-    const currentContent = editor.getJSON();
-
-    // Check if content has actually changed to avoid unnecessary updates
-    if (JSON.stringify(currentContent) === JSON.stringify(newContent)) {
-      return;
-    }
-
-    // Use a transaction to update content while preserving history
-    editor.view.dispatch(
-      editor.state.tr.replaceWith(
-        0,
-        editor.state.doc.content.size,
-        editor.schema.nodeFromJSON(newContent).content,
-      ),
-    );
-
-    // Restore cursor position after a brief delay
-    if (
-      editorRef.current &&
-      cursorPositionRef.current &&
-      isMountedRef.current
-    ) {
-      try {
-        const { from, to } = cursorPositionRef.current;
-        const docSize = editorRef.current.state.doc.content.size;
-
-        // Ensure positions are within document bounds
-        const safeFrom = Math.min(from, docSize);
-        const safeTo = Math.min(to, docSize);
-
-        // Restore selection
-        editorRef.current.commands.setTextSelection({
-          from: safeFrom,
-          to: safeTo,
-        });
-      } catch (error) {
-        // If restoration fails, just place cursor at a safe position
-        console.warn("Could not restore cursor position:", error);
-      }
-    }
-  }, []);
-
-  // Stable callback for handling WebSocket messages
+  // WebSocket message handler with typing protection
   const onWrite = React.useCallback(
     (message) => {
-      // Early return if component is unmounted
-      if (!isMountedRef.current) return;
+      if (
+        !isMountedRef.current ||
+        !editorRef.current ||
+        isUpdatingFromWSRef.current
+      ) {
+        return;
+      }
 
       try {
-        const parsedContent = JSON.parse(message.body);
+        const { payload, userId: userWhoText } = JSON.parse(message.body);
+        const newContent = payload.content;
+        const newContentStr = JSON.stringify(newContent);
 
-        if (editorRef.current && !isUpdatingFromWebSocket.current) {
-          // Set flag to prevent feedback loop
-          isUpdatingFromWebSocket.current = true;
+        if (Number(userId) === Number(userWhoText)) return;
 
-          // Apply changes while preserving cursor position
-          applyContentChanges(parsedContent);
-
-          // Store the content we just received
-          lastPublishedContent.current = JSON.stringify(parsedContent);
-
-          // Reset flag after a short delay, but only if still mounted
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              isUpdatingFromWebSocket.current = false;
-            }
-          }, 100);
+        // Skip if content is the same
+        if (newContentStr === lastPublishedContentRef.current) {
+          return;
         }
+
+        // Prevent feedback loop
+        isUpdatingFromWSRef.current = true;
+
+        // Store current cursor position
+        const { from, to } = editorRef.current.state.selection;
+
+        // Apply update without triggering onUpdate
+        editorRef.current.commands.setContent(newContent, false);
+
+        // Restore cursor if position is still valid
+        requestAnimationFrame(() => {
+          if (editorRef.current && isMountedRef.current) {
+            const docSize = editorRef.current.state.doc.content.size;
+            if (from <= docSize && to <= docSize) {
+              editorRef.current.commands.setTextSelection({ from, to });
+            }
+          }
+          isUpdatingFromWSRef.current = false;
+        });
       } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
+        console.error("WebSocket update error:", error);
+        isUpdatingFromWSRef.current = false;
       }
     },
-    [applyContentChanges], // Include applyContentChanges in dependencies
+    [userId],
   );
 
-  // Initialize WebSocket connection
-  const { client } = useWebSocket(onWrite);
+  // WebSocket connection
+  const { client, connected } = useWebSocket([
+    { topic: `/topic/write/room.${roomId}`, handler: onWrite },
+  ]);
 
-  // Debounced publish function to prevent too many WebSocket messages
-  const publishContent = React.useCallback(
-    (content) => {
-      if (!client || isUpdatingFromWebSocket.current) return;
+  // Publish with longer debounce to reduce network calls
+  const debouncedPublish = usePublishDebounce(
+    React.useCallback(
+      (content) => {
+        if (
+          !connected ||
+          !isMountedRef.current ||
+          isUpdatingFromWSRef.current
+        ) {
+          return;
+        }
 
-      const contentString = JSON.stringify(content);
+        const contentStr = JSON.stringify(content);
+        if (contentStr === lastPublishedContentRef.current) {
+          return;
+        }
 
-      // Don't publish if content hasn't changed
-      if (contentString === lastPublishedContent.current) return;
-
-      // Clear existing timeout
-      if (publishTimeoutRef.current) {
-        clearTimeout(publishTimeoutRef.current);
-      }
-
-      // Debounce the publish call
-      publishTimeoutRef.current = setTimeout(() => {
         try {
           client.publish({
-            destination: "/app/writing",
-            body: contentString,
+            destination: `/app/room/${roomId}/msg`,
+            body: JSON.stringify({
+              type: "text_update",
+              userId,
+              roomId,
+              payload: { content },
+            }),
           });
-          lastPublishedContent.current = contentString;
+          lastPublishedContentRef.current = contentStr;
         } catch (error) {
-          console.error("Failed to publish content:", error);
+          console.error("Publish error:", error);
         }
-      }, 300); // 300ms debounce
-    },
-    [client],
+      },
+      [connected, roomId, client, userId],
+    ),
+    50, // Longer debounce to reduce conflicts
   );
 
-  // Initialize editor with optimized configuration
-  const editor = useEditor({
-    onUpdate({ editor }) {
-      // Only publish if component is mounted and not updating from WebSocket
-      if (isMountedRef.current && !isUpdatingFromWebSocket.current) {
-        const content = editor.getJSON();
-        publishContent(content);
-      }
-    },
-    onCreate({ editor }) {
-      // Store editor reference when created
-      editorRef.current = editor;
-    },
-    onDestroy() {
-      // Clean up editor reference
-      editorRef.current = null;
-    },
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
-    editorProps: {
-      attributes: {
-        autocomplete: "off",
-        autocorrect: "off",
-        autocapitalize: "off",
-        "aria-label": "Main content area, start typing to enter text.",
-        class: "simple-editor",
+  // Editor with minimal extensions for better performance
+  const editor = useEditor(
+    {
+      onUpdate({ editor }) {
+        if (!isUpdatingFromWSRef.current && isMountedRef.current) {
+          // markUserTyping();
+          debouncedPublish(editor.getJSON());
+        }
       },
-    },
-    extensions: [
-      StarterKit.configure({
-        horizontalRule: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
+      onCreate({ editor }) {
+        editorRef.current = editor;
+      },
+      onDestroy() {
+        editorRef.current = null;
+      },
+      immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
+      editorProps: {
+        attributes: {
+          class: "simple-editor",
+          "aria-label": "Main content area, start typing to enter text.",
+          autocomplete: "off",
+          autocorrect: "off",
+          autocapitalize: "off",
         },
-      }),
-      HorizontalRule,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      Image,
-      Typography,
-      Superscript,
-      Subscript,
-      Selection,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error("Upload failed:", error),
-      }),
-    ],
-    content,
-  });
+      },
+      extensions: [
+        // Minimal extension set for better performance
+        StarterKit.configure({
+          horizontalRule: false,
+          history: {
+            depth: 50, // Reduced history depth
+            newGroupDelay: 1000,
+          },
+          link: {
+            openOnClick: false,
+          },
+        }),
+        TextAlign.configure({
+          types: ["heading", "paragraph"],
+          alignments: ["left", "center", "right"], // Removed justify for performance
+        }),
+        TaskList,
+        TaskItem.configure({ nested: false }), // Disabled nesting for performance
+        Highlight.configure({ multicolor: true }),
+        Typography,
+        HorizontalRule,
+      ],
+    },
+    [],
+  );
 
-  // Memoized toolbar event handlers to prevent re-renders
-  const handleHighlighterClick = React.useCallback(() => {
-    setMobileView("highlighter");
-  }, []);
+  // Event handlers
+  const handleHighlighterClick = React.useCallback(
+    () => setMobileView("highlighter"),
+    [],
+  );
+  const handleLinkClick = React.useCallback(() => setMobileView("link"), []);
+  const handleBackClick = React.useCallback(() => setMobileView("main"), []);
 
-  const handleLinkClick = React.useCallback(() => {
-    setMobileView("link");
-  }, []);
-
-  const handleBackClick = React.useCallback(() => {
-    setMobileView("main");
-  }, []);
-
-  const isScrolling = useScrolling();
-  const rect = useCursorVisibility({
-    editor,
-    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
-  });
-
-  // Effect to track component mount status and handle cleanup
+  // Effects
   React.useEffect(() => {
     isMountedRef.current = true;
+    async function fetchText() {
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/text/latest/${roomId}`,
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        console.log(data);
+
+        if (data.exists && data.content) {
+          editorRef.current.commands.setContent(data.content.content, false);
+        } else {
+          editorRef.current.commands.setContent(
+            {
+              type: "doc",
+              content: [
+                {
+                  type: "heading",
+                  attrs: {
+                    textAlign: null,
+                    level: 4,
+                    color: null,
+                    href: null,
+                    target: null,
+                    src: null,
+                    title: null,
+                    alt: null,
+                    checked: false,
+                    class: null,
+                  },
+                  content: [{ type: "text", text: "Heading" }],
+                },
+              ],
+            },
+            false,
+          );
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchText();
 
     return () => {
       isMountedRef.current = false;
-      // Clean up any pending timeouts
-      if (publishTimeoutRef.current) {
-        clearTimeout(publishTimeoutRef.current);
-      }
     };
-  }, []);
+  }, [roomId]);
 
-  // Effect to handle mobile view changes
   React.useEffect(() => {
-    if (!isMountedRef.current) return;
-
     if (!isMobile && mobileView !== "main") {
       setMobileView("main");
     }
   }, [isMobile, mobileView]);
 
-  // Cleanup effect for timeout (keeping this as backup)
-  React.useEffect(() => {
-    return () => {
-      if (publishTimeoutRef.current) {
-        clearTimeout(publishTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Memoized toolbar styles to prevent recalculation
+  // Simplified toolbar styles
   const toolbarStyles = React.useMemo(
-    () => ({
-      ...(isScrolling && isMobile
-        ? { opacity: 0, transition: "opacity 0.1s ease-in-out" }
-        : {}),
-      ...(isMobile
+    () =>
+      isMobile
         ? {
-            bottom: `calc(100% - ${windowSize.height - rect.y}px)`,
+            position: "fixed",
+            bottom: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
           }
-        : {}),
-    }),
-    [isScrolling, isMobile, windowSize.height, rect.y],
+        : {},
+    [isMobile],
   );
 
   return (
-    <>
-      <EditorContext.Provider value={{ editor }}>
-        <Toolbar ref={toolbarRef} style={toolbarStyles}>
-          {mobileView === "main" ? (
-            <MainToolbarContent
-              onHighlighterClick={handleHighlighterClick}
-              onLinkClick={handleLinkClick}
-              isMobile={isMobile}
-            />
-          ) : (
-            <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
-              onBack={handleBackClick}
-            />
-          )}
-        </Toolbar>
+    <EditorContext.Provider value={{ editor }}>
+      <Toolbar style={toolbarStyles}>
+        {mobileView === "main" ? (
+          <MainToolbarContent
+            onHighlighterClick={handleHighlighterClick}
+            onLinkClick={handleLinkClick}
+            isMobile={isMobile}
+          />
+        ) : (
+          <MobileToolbarContent
+            type={mobileView === "highlighter" ? "highlighter" : "link"}
+            onBack={handleBackClick}
+          />
+        )}
+      </Toolbar>
 
-        <EditorContent
-          editor={editor}
-          role="presentation"
-          className="simple-editor-content"
-        />
-      </EditorContext.Provider>
-    </>
+      <EditorContent editor={editor} className="simple-editor-content" />
+    </EditorContext.Provider>
   );
 }
 
-// Set display names for debugging
 MainToolbarContent.displayName = "MainToolbarContent";
 MobileToolbarContent.displayName = "MobileToolbarContent";
 
