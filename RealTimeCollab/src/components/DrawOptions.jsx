@@ -141,7 +141,7 @@ function DrawOptions({
                   scheduleRedraw();
                 }
               }}
-              className={`group relative rounded-xl p-3 transition-all duration-200 hover:scale-105 active:scale-95 ${
+              className={`group relative rounded-xl p-3 transition-all duration-200 hover:scale-105 focus:outline-none active:scale-95 ${
                 selectedTool === tool.id
                   ? "bg-blue-500 text-white shadow-md"
                   : "text-gray-600 hover:bg-blue-50 dark:text-neutral-300 dark:hover:bg-neutral-700"

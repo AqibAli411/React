@@ -1,369 +1,347 @@
 import {
   Send,
-  ArrowLeft,
-  Phone,
-  Video,
   Bot,
   Users,
   MoveLeft,
   MoveRight,
+  Hash,
+  Bell,
+  Settings,
 } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
-const contacts = [
+// Sample data - replace with your actual users prop
+const sampleUsers = [
+  { id: 1, name: "Alice Johnson", type: "joining" },
+  { id: 2, name: "Bob Smith", type: "joining" },
+  { id: 3, name: "Charlie Brown", type: "leaving" },
+  { id: 4, name: "Diana Prince", type: "joining" },
+  { id: 5, name: "Eve Wilson", type: "leaving" },
+  { id: 6, name: "Frank Miller", type: "joining" },
+];
+
+// Sample messages with system notifications
+const sampleMessages = [
   {
     id: 1,
-    name: "Ahmed Ali",
-    img: "p1.jpg",
-    lastMsg: "Hey, how are you doing today?",
-    time: "10:45",
-    unread: 2,
-    online: true,
-    messages: [
-      {
-        id: 1,
-        text: "Hey, how are you doing today?",
-        sender: "contact",
-        time: "10:40",
-      },
-      {
-        id: 2,
-        text: "I'm doing great! Just finished my workout 💪",
-        sender: "me",
-        time: "10:42",
-      },
-      {
-        id: 3,
-        text: "That's awesome! I should start working out too",
-        sender: "contact",
-        time: "10:45",
-      },
-    ],
+    type: "system",
+    text: "Alice Johnson joined",
+    timestamp: "9:00 AM",
+    userId: 1,
   },
   {
     id: 2,
-    name: "Sara Khan",
-    img: "p2.jpg",
-    lastMsg: "Let's meet tomorrow ☕",
-    time: "09:30",
-    unread: 0,
-    online: false,
-    messages: [
-      {
-        id: 1,
-        text: "Hey! Are you free tomorrow?",
-        sender: "contact",
-        time: "09:20",
-      },
-      { id: 2, text: "Yes, what's up?", sender: "me", time: "09:25" },
-      {
-        id: 3,
-        text: "Let's meet tomorrow at the coffee shop ☕",
-        sender: "contact",
-        time: "09:30",
-      },
-    ],
+    type: "message",
+    text: "Hey everyone! Excited to work on this project together.",
+    sender: "Alice Johnson",
+    timestamp: "9:02 AM",
+    userId: 1,
   },
   {
     id: 3,
-    name: "Usman Malik",
-    img: "p3.jpg",
-    lastMsg: "Project is ready! 🚀",
-    time: "Yesterday",
-    unread: 0,
-    online: true,
-    messages: [
-      {
-        id: 1,
-        text: "How's the project coming along?",
-        sender: "me",
-        time: "Yesterday",
-      },
-      {
-        id: 2,
-        text: "Almost done! Just fixing bugs",
-        sender: "contact",
-        time: "Yesterday",
-      },
-      {
-        id: 3,
-        text: "Project is ready for review! 🚀",
-        sender: "contact",
-        time: "Yesterday",
-      },
-    ],
+    type: "system",
+    text: "Bob Smith joined",
+    timestamp: "9:15 AM",
+    userId: 2,
+  },
+  {
+    id: 4,
+    type: "message",
+    text: "Good morning team! Let's get started with the wireframes.",
+    sender: "Bob Smith",
+    timestamp: "9:16 AM",
+    userId: 2,
+  },
+  {
+    id: 5,
+    type: "message",
+    text: "I've uploaded the initial designs to the shared folder. Please review when you get a chance.",
+    sender: "Alice Johnson",
+    timestamp: "9:45 AM",
+    userId: 1,
+  },
+  {
+    id: 6,
+    type: "system",
+    text: "Charlie Brown left",
+    timestamp: "10:30 AM",
+    userId: 3,
+  },
+  {
+    id: 7,
+    type: "system",
+    text: "Diana Prince joined",
+    timestamp: "11:00 AM",
+    userId: 4,
+  },
+  {
+    id: 8,
+    type: "message",
+    text: "Hi team! Sorry I'm late. Catching up on the conversation now.",
+    sender: "Diana Prince",
+    timestamp: "11:05 AM",
+    userId: 4,
   },
 ];
 
-const aiChat = {
-  id: "ai",
-  name: "AI Assistant",
-  img: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=150&h=150&fit=crop&crop=center",
-  lastMsg: "How can I help you today?",
-  time: "Now",
-  unread: 0,
-  online: true,
-  messages: [
-    {
-      id: 1,
-      text: "Hello! I'm your AI assistant. How can I help you today?",
-      sender: "contact",
-      time: "Now",
-    },
-    {
-      id: 2,
-      text: "Hi! Can you help me with some questions?",
-      sender: "me",
-      time: "Now",
-    },
-    {
-      id: 3,
-      text: "Absolutely! I'm here to help with anything you need.",
-      sender: "contact",
-      time: "Now",
-    },
-  ],
-};
-
-function ChatSection() {
-  const [selectedUser, setSelectedUser] = useState(null);
+function ChatSection({ users = sampleUsers }) {
   const [newMessage, setNewMessage] = useState("");
   const [isAiMode, setIsAiMode] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [messages, setMessages] = useState(sampleMessages);
+  const [activeUsers, setActiveUsers] = useState([]);
+
+  // Get user initials for avatar
+  const getUserInitials = (name) => {
+    const nameParts = name.split(" ");
+    if (nameParts.length >= 2) {
+      return `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase();
+    }
+    return nameParts[0].charAt(0).toUpperCase();
+  };
+
+  // Get user avatar color based on name
+  const getUserAvatarColor = (name) => {
+    const colors = [
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-yellow-500",
+      "bg-red-500",
+      "bg-teal-500",
+    ];
+    const hash = name.split("").reduce((a, b) => a + b.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
 
   const handleSendMessage = () => {
-    if (newMessage.trim() && selectedUser) {
-      console.log("Sending message:", newMessage);
+    if (newMessage.trim()) {
+      const newMsg = {
+        id: Date.now(),
+        type: "message",
+        text: newMessage,
+        sender: "You",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        userId: "current-user",
+      };
+
+      setMessages((prev) => [...prev, newMsg]);
       setNewMessage("");
     }
   };
 
-  const handleBackToChats = () => {
-    setSelectedUser(null);
-  };
-
   const toggleMode = () => {
     setIsAiMode(!isAiMode);
-    setSelectedUser(null);
   };
 
-  const currentChats = isAiMode ? [aiChat] : contacts;
+  // Filter active users
+  const joiningUsers = sampleUsers.filter((user) => user.type === "joining");
+  const onlineCount = joiningUsers.length;
+
+  useEffect(() => {
+    setActiveUsers(joiningUsers);
+  }, [users]);
 
   return (
-    <div className="flex border-r border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-      {/* Sidebar */}
-      <div
-        className={`flex flex-col ${isCompact ? "items-center" : ""} overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-neutral-900 ${
-          selectedUser ? "hidden" : isCompact ? "mt-2 w-17" : "w-85 p-2"
-        }`}
-      >
-        {/* Header */}
-        <div
-          className={`flex flex-col gap-4 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg transition-all duration-300 ease-in-out dark:from-blue-600 dark:to-blue-700 ${
-            !isCompact ? "p-4" : "self-center p-2"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsCompact(!isCompact)}
-              className="rounded-lg bg-white/20 p-2 transition-all duration-200 hover:scale-105 hover:bg-white/30 active:scale-95"
-            >
-              {!isCompact ? (
-                <MoveLeft className="h-5 w-5" />
-              ) : (
-                <MoveRight className="h-5 w-5" />
-              )}
-            </button>
-            {!isCompact && <h1 className="text-xl font-semibold">Messages</h1>}
-          </div>
-
-          {/* AI/Users Toggle */}
-          {!isCompact && (
-            <div className="flex rounded-lg bg-white/10 p-1 backdrop-blur-sm">
+    <div
+      className={`flex ${!isCompact ? "flex-1" : ""} border-r border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900`}
+    >
+      {/* Chat Area */}
+      <div className="flex flex-1 flex-col">
+        {/* Compact Mode Users */}
+        {isCompact && !isAiMode && (
+          <div className="overflow-y-auto p-2">
+            <div className="mb-2 flex items-center">
               <button
-                onClick={() => setIsAiMode(false)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                  !isAiMode
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
-                }`}
+                onClick={() => setIsCompact(!isCompact)}
+                className="rounded-lg p-2 transition-colors hover:bg-gray-200 dark:hover:bg-neutral-700"
               >
-                <Users className="h-4 w-4" />
-                Chats
-              </button>
-              <button
-                onClick={() => setIsAiMode(true)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                  isAiMode
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <Bot className="h-4 w-4" />
-                AI Chat
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Chat List */}
-        <div className="mt-2 flex-1 overflow-y-auto">
-          {currentChats.map((person) => (
-            <div
-              key={person.id}
-              onClick={() => setSelectedUser(person)}
-              className="group m-1 flex cursor-pointer items-center gap-3 rounded-lg border-b border-gray-100 p-3 transition-all duration-200 hover:bg-white hover:shadow-sm active:scale-[0.98] dark:border-neutral-800 dark:hover:bg-neutral-800"
-            >
-              {/* Profile Image */}
-              <div className="relative">
-                <div className="h-12 w-12 overflow-hidden rounded-full ring-2 ring-gray-100 transition-all duration-200 group-hover:ring-blue-200 dark:ring-neutral-700 dark:group-hover:ring-blue-500/30">
-                  <img
-                    className="h-full w-full object-cover"
-                    src={person.img}
-                    alt={person.name}
-                  />
-                </div>
-                {person.online && (
-                  <div className="absolute -right-0.5 -bottom-0.5 h-3 w-3 animate-pulse rounded-full border-2 border-white bg-green-400 dark:border-neutral-900"></div>
-                )}
-              </div>
-
-              {/* Chat Info */}
-              {!isCompact && (
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="truncate font-medium text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
-                      {person.name}
-                    </p>
-                    <span className="text-xs text-gray-500 dark:text-neutral-400">
-                      {person.time}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="truncate text-sm text-gray-600 dark:text-neutral-300">
-                      {person.lastMsg}
-                    </p>
-                    {person.unread > 0 && (
-                      <span className="ml-2 flex h-5 w-5 animate-bounce items-center justify-center rounded-full bg-blue-500 text-xs text-white">
-                        {person.unread}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat Window */}
-      {selectedUser && (
-        <div className="flex w-full flex-col bg-white dark:bg-neutral-900">
-          {/* Chat Header */}
-          <div className="flex items-center gap-3 border-b border-gray-200 bg-white p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/50">
-            <button
-              onClick={handleBackToChats}
-              className="rounded-full p-2 transition-all duration-200 hover:bg-gray-100 active:scale-90 dark:hover:bg-neutral-700"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-neutral-300" />
-            </button>
-
-            <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-gray-200 dark:ring-neutral-600">
-              <img
-                className="h-full w-full object-cover"
-                src={selectedUser.img}
-                alt={selectedUser.name}
-              />
-            </div>
-
-            <div className="flex-1">
-              <p className="font-medium text-gray-900 dark:text-white">
-                {selectedUser.name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-neutral-400">
-                {selectedUser.online ? (
-                  <span className="flex items-center gap-1">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
-                    Online
-                  </span>
+                {!isCompact ? (
+                  <MoveLeft className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
                 ) : (
-                  "Last seen recently"
+                  <MoveRight className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
                 )}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button className="rounded-full p-2 transition-all duration-200 hover:scale-110 hover:bg-gray-100 active:scale-95 dark:hover:bg-neutral-700">
-                <Phone className="h-5 w-5 text-gray-600 dark:text-neutral-300" />
-              </button>
-              <button className="rounded-full p-2 transition-all duration-200 hover:scale-110 hover:bg-gray-100 active:scale-95 dark:hover:bg-neutral-700">
-                <Video className="h-5 w-5 text-gray-600 dark:text-neutral-300" />
               </button>
             </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-neutral-900">
-            <div className="space-y-4">
-              {selectedUser.messages.map((message, index) => (
-                <div
-                  key={message.id}
-                  className={`animate-in slide-in-from-bottom-5 flex duration-300 ${
-                    message.sender === "me" ? "justify-end" : "justify-start"
-                  }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
+            <div className="space-y-3">
+              {activeUsers.slice(0, 8).map((user) => (
+                <div key={user.id} className="flex justify-center">
                   <div
-                    className={`max-w-xs rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] ${
-                      message.sender === "me"
-                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
-                        : "border border-gray-100 bg-white text-gray-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
-                    }`}
+                    className={`h-10 w-10 rounded-full ${getUserAvatarColor(user.name)} relative flex items-center justify-center text-sm font-medium text-white`}
                   >
-                    <p className="text-sm leading-relaxed break-words">
-                      {message.text}
-                    </p>
-                    <p
-                      className={`mt-2 text-xs ${
-                        message.sender === "me"
-                          ? "text-blue-100"
-                          : "text-gray-500 dark:text-neutral-400"
-                      }`}
-                    >
-                      {message.time}
-                    </p>
+                    {getUserInitials(user.name)}
+                    <div className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500 dark:border-neutral-700"></div>
                   </div>
                 </div>
               ))}
+              {activeUsers.length > 8 && (
+                <div className="flex justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-400 text-xs font-medium text-white dark:bg-neutral-600">
+                    +{activeUsers.length - 8}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Message Input */}
-          <div className="flex items-center gap-3 border-t border-gray-200 bg-white p-4 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/50">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="Type a message..."
-                className="w-full rounded-full border border-gray-200 bg-gray-100 px-4 py-3 pr-12 text-gray-800 placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 dark:placeholder-neutral-400"
-              />
+        {/* Chat Header */}
+        {!isCompact && (
+          <>
+            <div className="flex items-center justify-between gap-4 border-b border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setIsCompact(!isCompact)}
+                    className="rounded-lg p-2 transition-colors hover:bg-gray-200 dark:hover:bg-neutral-700"
+                  >
+                    {!isCompact ? (
+                      <MoveLeft className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
+                    ) : (
+                      <MoveRight className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
+                    )}
+                  </button>
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900 dark:text-neutral-100">
+                    {isAiMode ? "AI Chat" : "Team Chat"}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-neutral-400">
+                    {isAiMode ? "" : `${onlineCount} online`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-neutral-600 dark:bg-neutral-700">
+                <button
+                  onClick={() => setIsAiMode(false)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    !isAiMode
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-neutral-600"
+                  }`}
+                >
+                  <Users className="h-4 w-4" />
+                  Chat
+                </button>
+                <button
+                  onClick={() => setIsAiMode(true)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    isAiMode
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-neutral-600"
+                  }`}
+                >
+                  <Bot className="h-4 w-4" />
+                  AI
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim()}
-              className={`transform rounded-full p-3 transition-all duration-200 ${
-                newMessage.trim()
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:scale-110 hover:from-blue-600 hover:to-blue-700 hover:shadow-blue-500/25 active:scale-95"
-                  : "cursor-not-allowed bg-gray-300 text-gray-500 dark:bg-neutral-600 dark:text-neutral-400"
-              }`}
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      )}
+            {/* Messages */}
+            <div className="space-y-4 overflow-y-auto p-4">
+              {!isAiMode ? (
+                messages.map((message) => (
+                  <div key={message.id}>
+                    {message.type === "system" ? (
+                      <div className="flex justify-center">
+                        <div className="rounded-full bg-gray-100 px-3 py-1 dark:bg-neutral-700">
+                          <p className="text-sm text-gray-600 dark:text-neutral-400">
+                            {message.text} • {message.timestamp}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-3">
+                        <div
+                          className={`h-8 w-8 rounded-full ${getUserAvatarColor(message.sender)} flex flex-shrink-0 items-center justify-center text-sm font-medium text-white`}
+                        >
+                          {message.sender === "You"
+                            ? "Y"
+                            : getUserInitials(message.sender)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-baseline gap-2">
+                            <span className="font-medium text-gray-900 dark:text-neutral-100">
+                              {message.sender}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-neutral-400">
+                              {message.timestamp}
+                            </span>
+                          </div>
+                          <p className="leading-relaxed text-gray-700 dark:text-neutral-300">
+                            {message.text}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <Bot className="mb-4 h-16 w-16 text-blue-500" />
+                  <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-neutral-100">
+                    AI Assistant Ready
+                  </h3>
+                  <p className="mb-4 text-gray-500 dark:text-neutral-400">
+                    Ask me anything about your project or get help with
+                    collaboration.
+                  </p>
+                  <div className="space-y-2 text-sm text-gray-400 dark:text-neutral-500">
+                    <p>• Generate ideas and suggestions</p>
+                    <p>• Help with project planning</p>
+                    <p>• Answer questions about collaboration</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="border-t border-gray-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder={
+                      isAiMode ? "Ask AI assistant..." : "Type a message..."
+                    }
+                    rows="1"
+                    className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100 dark:placeholder-neutral-400"
+                    style={{ minHeight: "44px", maxHeight: "120px" }}
+                    onInput={(e) => {
+                      e.target.style.height = "auto";
+                      e.target.style.height =
+                        Math.min(e.target.scrollHeight, 120) + "px";
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim()}
+                  className={`rounded-lg p-3 transition-all duration-200 ${
+                    newMessage.trim()
+                      ? "bg-blue-500 text-white shadow-sm hover:bg-blue-600 hover:shadow-md"
+                      : "cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-neutral-700 dark:text-neutral-500"
+                  }`}
+                >
+                  <Send className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
