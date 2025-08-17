@@ -321,7 +321,7 @@ export default function RoomPage() {
                       <button
                         onClick={copyToClipboard}
                         disabled={isGenerating}
-                          className={`rounded-xl p-3 transition-all duration-200 ${
+                        className={`rounded-xl p-3 transition-all duration-200 ${
                           copied
                             ? "bg-green-500 text-white"
                             : buttonSecondaryClasses
