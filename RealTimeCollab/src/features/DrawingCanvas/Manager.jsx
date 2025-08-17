@@ -10,7 +10,13 @@ import CanvasDraw from "./CanvasDraw";
 import DrawOptions from "../../components/DrawOptions";
 import SimpleEditor from "../TextEditor/components/tiptap-templates/simple/simple-editor";
 
-export default function Manager({ isDarkMode, roomId, id: userId, mode }) {
+export default function Manager({
+  isDarkMode,
+  roomId,
+  id: userId,
+  mode,
+  name,
+}) {
   const canvasRef = useRef(null);
   const containerRef = useRef();
   const ctxRef = useRef(null);
@@ -216,9 +222,13 @@ export default function Manager({ isDarkMode, roomId, id: userId, mode }) {
   );
 
   // In the onStop callback, update to handle width and color:
-  const { client } = useWebSocket([
-    { topic: `/topic/room.${roomId}`, handler: onMessage },
-  ]);
+  const { client } = useWebSocket(
+    [{ topic: `/topic/room.${roomId}`, handler: onMessage }],
+    {
+      id: userId,
+      name,
+    },
+  );
 
   // Set mounted flag and fetches inital data from backend
   useEffect(() => {
@@ -537,7 +547,7 @@ export default function Manager({ isDarkMode, roomId, id: userId, mode }) {
         className={`${mode === "text" ? "block" : "hidden"} flex-3 overflow-auto`}
       >
         <div className={`simple-editor-wrapper`}>
-          <SimpleEditor roomId={roomId} userId={userId} />
+          <SimpleEditor roomId={roomId} userId={userId} name={name} />
         </div>
       </div>
       <div

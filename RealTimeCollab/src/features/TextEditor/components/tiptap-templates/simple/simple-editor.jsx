@@ -147,7 +147,7 @@ const MobileToolbarContent = React.memo(({ type, onBack }) => (
   </>
 ));
 
-function SimpleEditor({ roomId, userId }) {
+function SimpleEditor({ roomId, userId, name }) {
   const isMobile = useIsMobile();
   const windowSize = useWindowSize();
   const [mobileView, setMobileView] = React.useState("main");
@@ -209,9 +209,13 @@ function SimpleEditor({ roomId, userId }) {
   );
 
   // WebSocket connection
-  const { client, connected } = useWebSocket([
-    { topic: `/topic/write/room.${roomId}`, handler: onWrite },
-  ]);
+  const { client, connected } = useWebSocket(
+    [{ topic: `/topic/write/room.${roomId}`, handler: onWrite }],
+    {
+      id: userId,
+      name,
+    },
+  );
 
   // Publish with longer debounce to reduce network calls
   const debouncedPublish = usePublishDebounce(

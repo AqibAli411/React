@@ -2,20 +2,29 @@ import { Client } from "@stomp/stompjs";
 import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 
-function useWebSocket(subscriptions) {
+function useWebSocket(subscriptions, me = {}) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
   const subsRef = useRef(subscriptions);
+  const meRef = useRef(me);
 
+  useEffect(
+    function () {
+      meRef.current = me;
+    },
+    [me],
+  );
 
   useEffect(() => {
     subsRef.current = subscriptions;
   }, [subscriptions]);
 
-
   useEffect(() => {
     const client = new Client({
-      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+      webSocketFactory: () =>
+        new SockJS(
+          `http://localhost:8080/ws?userId=${meRef.current.id}&name=${encodeURIComponent(meRef.current.name)}`,
+        ),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -28,7 +37,7 @@ function useWebSocket(subscriptions) {
         client.subscribe(topic, handler);
       });
     };
-    
+
     client.onDisconnect = () => {
       setConnected(false);
     };
