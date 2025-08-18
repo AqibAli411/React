@@ -3,7 +3,6 @@ import ModeHeader from "../components/ModeHeader";
 import { useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Manager from "../features/DrawingCanvas/Manager.jsx";
-import usePresence from "./usePresence.js";
 
 function DashBoard() {
   const [mode, setMode] = useState("canvas"); // 'canvas' or 'text'
@@ -14,8 +13,6 @@ function DashBoard() {
   const name = searchParams.get("name");
   const id = searchParams.get("id");
   //name and id here have
-
-  const users = usePresence(roomId, { id, name });
 
   return (
     <section className="mx-auto flex w-full flex-col p-2 shadow-xs">
@@ -28,7 +25,7 @@ function DashBoard() {
         name={name}
       />
       <div className="flex h-[550px] justify-between">
-        <ChatSection users={users} />
+        <ChatSection roomId={roomId} currentUser ={{name,id}}/>
         <Manager
           isDarkMode={isDarkMode}
           roomId={roomId}

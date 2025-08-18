@@ -19,7 +19,6 @@ import {
 import "@/components/tiptap-node/heading-node/heading-node.scss";
 
 // --- Tiptap Node ---
-import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension";
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension";
 // Add these imports back (they were in old version):
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss";
@@ -33,12 +32,10 @@ import "@/components/tiptap-node/paragraph-node/paragraph-node.scss";
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu";
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu";
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button";
-import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button";
 
 import {
   ColorHighlightPopover,
   ColorHighlightPopoverContent,
-  ColorHighlightPopoverButton,
 } from "@/components/tiptap-ui/color-highlight-popover";
 import {
   LinkPopover,
@@ -61,8 +58,7 @@ import { useWindowSize } from "@/hooks/use-window-size";
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss";
 
-import content from "@/components/tiptap-templates/simple/data/content.json";
-import useWebSocket from "../../../../DrawingCanvas/hooks/useWebSocket";
+import { useWebSocket } from "../../../../../context/useWebSocketContext";
 
 // Simplified debounce for publishing only
 function usePublishDebounce(callback, delay) {
@@ -157,6 +153,8 @@ function SimpleEditor({ roomId, userId, name }) {
   const isMountedRef = React.useRef(false);
   const isUpdatingFromWSRef = React.useRef(false);
   const lastPublishedContentRef = React.useRef("");
+  const { connected, isReady, subscribe, unsubscribe, publish } =
+    useWebSocket();
 
   // WebSocket message handler with typing protection
   const onWrite = React.useCallback(
@@ -209,13 +207,24 @@ function SimpleEditor({ roomId, userId, name }) {
   );
 
   // WebSocket connection
-  const { client, connected } = useWebSocket(
-    [{ topic: `/topic/write/room.${roomId}`, handler: onWrite }],
-    {
-      id: userId,
-      name,
-    },
-  );
+  // const { client, connected } = useWebSocket(
+  //   [{ topic: `/topic/write/room.${roomId}`, handler: onWrite }],
+  //   {
+  //     id: userId,
+  //     name,
+  //   },
+  // );
+  React.useEffect(() => {
+    if (!isReady) return;
+
+    const topic = `/topic/write/room.${roomId}`;
+
+    subscribe(topic, onWrite);
+
+    return () => {
+      unsubscribe(topic);
+    };
+  }, [isReady, roomId, subscribe, unsubscribe, onWrite]);
 
   // Publish with longer debounce to reduce network calls
   const debouncedPublish = usePublishDebounce(
@@ -235,21 +244,27 @@ function SimpleEditor({ roomId, userId, name }) {
         }
 
         try {
-          client.publish({
-            destination: `/app/room/${roomId}/msg`,
-            body: JSON.stringify({
-              type: "text_update",
-              userId,
-              roomId,
-              payload: { content },
-            }),
+          // client.publish({
+          //   destination: `/app/room/${roomId}/msg`,
+          //   body: JSON.stringify({
+          //     type: "text_update",
+          //     userId,
+          //     roomId,
+          //     payload: { content },
+          //   }),
+          // });
+          publish(`/app/room/${roomId}/msg`, {
+            type: "text_update",
+            userId,
+            roomId,
+            payload: { content },
           });
           lastPublishedContentRef.current = contentStr;
         } catch (error) {
           console.error("Publish error:", error);
         }
       },
-      [connected, roomId, client, userId],
+      [connected, roomId, userId, publish],
     ),
     50, // Longer debounce to reduce conflicts
   );

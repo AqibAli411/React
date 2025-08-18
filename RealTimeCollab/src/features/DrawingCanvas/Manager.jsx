@@ -1,5 +1,4 @@
 import { useRef, useEffect, useCallback } from "react";
-import useWebSocket from "./hooks/useWebSocket";
 import { useDrawingState } from "./hooks/useDrawingState";
 import { useCanvasRenderer } from "./hooks/useCanvasRenderer";
 import { useUndoRedo } from "./hooks/useUndoRedo";
@@ -9,6 +8,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import CanvasDraw from "./CanvasDraw";
 import DrawOptions from "../../components/DrawOptions";
 import SimpleEditor from "../TextEditor/components/tiptap-templates/simple/simple-editor";
+import { useWebSocket } from "../../context/useWebSocketContext";
 
 export default function Manager({
   isDarkMode,
@@ -25,6 +25,8 @@ export default function Manager({
   const penWidth = useRef(2);
   const colorRef = useRef(isDarkMode ? "#000000" : "#ffffff");
   const currentToolRef = useRef("pen");
+
+  const { isReady, subscribe, unsubscribe, publish } = useWebSocket();
 
   // Initialize drawing state management
   const {
@@ -221,14 +223,18 @@ export default function Manager({
     ],
   );
 
-  // In the onStop callback, update to handle width and color:
-  const { client } = useWebSocket(
-    [{ topic: `/topic/room.${roomId}`, handler: onMessage }],
-    {
-      id: userId,
-      name,
-    },
-  );
+  useEffect(() => {
+    if (!isReady) return;
+
+    const topic = `/topic/room.${roomId}`;
+
+    subscribe(topic, onMessage);
+
+    return () => {
+      unsubscribe(topic);
+    };
+  }, [isReady, roomId, subscribe, unsubscribe, onMessage]);
+
 
   // Set mounted flag and fetches inital data from backend
   useEffect(() => {
@@ -296,7 +302,8 @@ export default function Manager({
   // Keyboard shortcuts
   useKeyboardShortcuts({
     canUndo,
-    client,
+    publish,
+    isReady,
     containerRef,
     onRedo: () => {
       if (canRedo) {
@@ -315,7 +322,7 @@ export default function Manager({
       if (e.button === 2) return;
       containerRef?.current?.focus();
 
-      if (!client) return;
+      if (!isReady) return;
       isDownPressed.current = true;
       e.preventDefault();
 
@@ -335,42 +342,39 @@ export default function Manager({
 
         // Send to network only if strokes were actually erased
         if (erasedStrokes.length > 0) {
-          client.publish({
-            destination: `/app/room/${roomId}/msg`,
-            body: JSON.stringify({
-              type: "clear",
-              roomId,
-              userId,
-              payload: {
-                erasedStrokes,
-              },
-            }),
+
+          publish(`/app/room/${roomId}/msg`, {
+            type: "clear",
+            roomId,
+            userId,
+            payload: {
+              erasedStrokes,
+            },
           });
         }
       } else {
         const newStrokeId = startNewStroke(point);
         scheduleRedraw();
-        client.publish({
-          destination: `/app/room/${roomId}/msg`,
-          body: JSON.stringify({
-            type: "stroke_move",
-            roomId,
-            userId,
-            strokeId: newStrokeId,
-            payload: {
-              x: point[0],
-              y: point[1],
-              pressure: point[2],
-              tool: currentToolRef.current,
-              width: penWidth.current,
-              color: colorRef.current,
-            },
-          }),
+
+        publish(`/app/room/${roomId}/msg`, {
+          type: "stroke_move",
+          roomId,
+          userId,
+          strokeId: newStrokeId,
+          payload: {
+            x: point[0],
+            y: point[1],
+            pressure: point[2],
+            tool: currentToolRef.current,
+            width: penWidth.current,
+            color: colorRef.current,
+          },
         });
       }
     },
     [
-      client,
+      isReady,
+      publish,
       getCanvasPoint,
       currentToolRef,
       startPan,
@@ -389,7 +393,7 @@ export default function Manager({
   // FIXED: Update handlePointerMove for better eraser logic
   const handlePointerMove = useCallback(
     (e) => {
-      if (!client) return;
+      if (!isReady) return;
 
       if (!isDownPressed.current) return;
 
@@ -412,16 +416,14 @@ export default function Manager({
 
         // Send to network only if strokes were actually erased
         if (erasedStrokes.length > 0) {
-          client.publish({
-            destination: `/app/room/${roomId}/msg`,
-            body: JSON.stringify({
-              type: "clear",
-              roomId,
-              userId,
-              payload: {
-                erasedStrokes,
-              },
-            }),
+     
+          publish(`/app/room/${roomId}/msg`, {
+            type: "clear",
+            roomId,
+            userId,
+            payload: {
+              erasedStrokes,
+            },
           });
         }
       } else {
@@ -432,30 +434,30 @@ export default function Manager({
 
         // Throttled network update
         const now = performance.now();
+
         if (now - lastEventTime.current >= 16) {
           lastEventTime.current = now;
-          client.publish({
-            destination: `/app/room/${roomId}/msg`,
-            body: JSON.stringify({
-              type: "stroke_move",
-              roomId,
-              userId,
-              strokeId: currentStrokeId.current,
-              payload: {
-                x: point[0],
-                y: point[1],
-                pressure: point[2],
-                tool: currentToolRef.current,
-                width: penWidth.current,
-                color: colorRef.current,
-              },
-            }),
+        
+          publish(`/app/room/${roomId}/msg`, {
+            type: "stroke_move",
+            roomId,
+            userId,
+            strokeId: currentStrokeId.current,
+            payload: {
+              x: point[0],
+              y: point[1],
+              pressure: point[2],
+              tool: currentToolRef.current,
+              width: penWidth.current,
+              color: colorRef.current,
+            },
           });
         }
       }
     },
     [
-      client,
+      isReady,
+      publish,
       getCanvasPoint,
       isPanning,
       continuePan,
@@ -489,7 +491,7 @@ export default function Manager({
     }
 
     // Regular drawing logic
-    if (!isDrawing.current || !client) return;
+    if (!isDrawing.current || !isReady) return;
 
     const strokeData = clearLocalStroke();
     if (strokeData.points.length > 0) {
@@ -505,20 +507,17 @@ export default function Manager({
       addCompletedStroke(strokeWithMetadata);
       addToHistory();
 
-      client.publish({
-        destination: `/app/room/${roomId}/msg`,
-        body: JSON.stringify({
-          type: "stroke_end",
-          roomId,
-          userId,
-          strokeId: strokeData.id,
-          payload: {
-            currentStrokes: strokeData.points,
-            tool: currentToolRef.current,
-            width: penWidth.current,
-            color: colorRef.current,
-          },
-        }),
+      publish(`/app/room/${roomId}/msg`, {
+        type: "stroke_end",
+        roomId,
+        userId,
+        strokeId: strokeData.id,
+        payload: {
+          currentStrokes: strokeData.points,
+          tool: currentToolRef.current,
+          width: penWidth.current,
+          color: colorRef.current,
+        },
       });
     }
 
@@ -527,7 +526,8 @@ export default function Manager({
     isPanning,
     stopPan,
     isDrawing,
-    client,
+    isReady,
+    publish,
     currentToolRef,
     stopErasing,
     clearLocalStroke,

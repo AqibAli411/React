@@ -2,7 +2,8 @@
 import { useEffect, useCallback } from "react";
 
 export function useKeyboardShortcuts({
-  client,
+  isReady,
+  publish,
   canUndo,
   onRedo,
   currentToolRef,
@@ -29,14 +30,12 @@ export function useKeyboardShortcuts({
         e.preventDefault();
         //as user enters "ctrl + z" it should go back for ever user
         //we will publish here -> subscribe method -> call undo method
-        if(!client) return;
+        if (!isReady) return;
 
-        client.publish({
-          destination: "/app/undo",
-          body: JSON.stringify({
-            canUndo,
-          }),
+        publish("/app/undo", {
+          canUndo,
         });
+
         return;
       }
 
@@ -100,10 +99,11 @@ export function useKeyboardShortcuts({
       onZoomOut,
       onSelectPen,
       canUndo,
-      client,
+      isReady,
       currentToolRef,
       isPanning,
       isDownPressed,
+      publish,
     ],
   );
 
@@ -121,7 +121,7 @@ export function useKeyboardShortcuts({
 
   useEffect(() => {
     const node = containerRef.current;
-    if(!node) return;
+    if (!node) return;
     node.focus();
     node.addEventListener("keydown", handleKeyDown);
     node.addEventListener("keyup", handleKeyUp);

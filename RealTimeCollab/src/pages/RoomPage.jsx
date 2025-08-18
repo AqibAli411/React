@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// RoomPage.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Clipboard,
   Check,
@@ -11,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useWebSocket } from "../context/useWebSocketContext";
 
 export default function RoomPage() {
   const [name, setName] = useState("");
@@ -22,8 +24,12 @@ export default function RoomPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [nameError, setNameError] = useState("");
   const [roomIdError, setRoomIdError] = useState("");
-
   const navigate = useNavigate();
+
+  const { connectWithUser } = useWebSocket();
+
+  // Memoize user data to prevent unnecessary updates
+  const userData = useMemo(() => ({ id: null, name: null }), []);
 
   // Auto-generate room ID when switching to create mode
   useEffect(() => {
@@ -34,7 +40,6 @@ export default function RoomPage() {
 
   const generateRoomId = async () => {
     setIsGenerating(true);
-    // Add a small delay for better UX
     await new Promise((resolve) => setTimeout(resolve, 300));
     const id = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoomId(id);
@@ -84,47 +89,53 @@ export default function RoomPage() {
 
   const url = "http://localhost:8080/api/room";
 
-  //handles create functionality of rooom
   const handleCreate = async () => {
     if (!validateName(name)) return;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: roomId,
-        userid: randomNumber(),
-        username: name,
-      }),
-    });
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: roomId,
+          userId: randomNumber(),
+          username: name,
+        }),
+      });
 
-    const { id, username, userid } = await response.json();
-
-    navigate(`/room/${id}?name=${username}&id=${userid}`);
-    // Add success animation or navigation here
+      const { id, username, userId } = await response.json();
+      userData.id = userId;
+      userData.name = username;
+      navigate(`/room/${id}?name=${username}&id=${userId}`);
+    } catch (err) {
+      console.error("Failed to create room:", err);
+    }
   };
 
-  
-  //handles join functionality of rooom
   const handleJoin = async () => {
     if (!validateName(name) || !validateRoomId(joinRoomId)) return;
 
     try {
       const response = await fetch(`${url}/${joinRoomId}`);
-
       if (!response.ok) throw new Error("Room cannot be found!");
 
-      const { id, userid } = await response.json();
-
+      const { id, userId, username } = await response.json();
+      userData.id = userId;
+      userData.name = username;
       navigate(`/room/${id}?name=${name}&id=${randomNumber()}`);
     } catch (err) {
-      console.log(err);
+      console.error("Failed to join room:", err);
     }
   };
 
-
+  // Connect WebSocket after user data is set
+  useEffect(() => {
+    if (userData.id && userData.name) {
+      connectWithUser(userData);
+    }
+  }, [userData.id, userData.name, connectWithUser]);
 
   const handleBack = () => {
     navigate(-1);
@@ -146,7 +157,6 @@ export default function RoomPage() {
   const themeClasses = isDarkMode
     ? "bg-neutral-900"
     : "bg-gradient-to-br from-blue-50 via-white to-neutral-50";
-
 
   const inputClasses = isDarkMode
     ? "bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700"
@@ -176,8 +186,6 @@ export default function RoomPage() {
     <div
       className={`flex min-h-screen items-center justify-center px-4 py-8 ${themeClasses}`}
     >
-     
-
       {/* Header Controls */}
       <div className="absolute top-6 right-6 left-6 z-10 flex items-center justify-between">
         <button
@@ -198,7 +206,7 @@ export default function RoomPage() {
 
       {/* Main Card */}
       <div
-        className={`relative w-full max-w-lg rounded-3xl p-8 border border-gray-300`}
+        className={`relative w-full max-w-lg rounded-3xl border border-gray-300 p-8`}
       >
         {/* Header */}
         <div className="mb-8 text-center">
