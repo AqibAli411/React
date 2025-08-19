@@ -30,8 +30,9 @@ export default function useCollaboration(roomId, me) {
   }, [me.id, me.name, connectWithUser]);
 
   useEffect(() => {
-    if (!isReady) return;
+    console.log("this doesnt run");
 
+    if (!isReady) return;
     const presenceTopic = `/topic/room.${roomId}.presence`;
     const presenceHandler = (message) => {
       try {
@@ -125,6 +126,7 @@ export default function useCollaboration(roomId, me) {
         ]);
 
         const usersData = usersResponse.ok ? await usersResponse.json() : [];
+        console.log("tracking users: ", usersData);
         const messagesData = messagesResponse.ok
           ? await messagesResponse.json()
           : [];

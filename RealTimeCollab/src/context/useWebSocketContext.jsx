@@ -17,7 +17,9 @@ export function WebSocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef(null);
   const subscriptionsRef = useRef(new Map()); // Track active subscriptions
-  const userRef = useRef({ id: null, name: null }); // Use ref to avoid state re-renders
+
+  // const userRef = useRef({ id: null, name: null }); // Use ref to avoid state re-renders
+  const [user, setUser] = useState({ id: null, name: null });
 
   // Function to update user and connect WebSocket
   const connectWithUser = useCallback((userData) => {
@@ -25,26 +27,31 @@ export function WebSocketProvider({ children }) {
       console.error("User ID and name are required for WebSocket connection");
       return;
     }
+
+    setUser(userData);
     // Only update if user data changes
-    if (
-      userRef.current.id !== userData.id ||
-      userRef.current.name !== userData.name
-    ) {
-      console.log("Updating user data:", userData);
-      userRef.current.id = userData.id;
-      userRef.current.name = userData.name;
-    }
+    // if (
+    //   userRef.current.id !== userData.id ||
+    //   userRef.current.name !== userData.name
+    // ) {
+    //   console.log("Updating user data:", userData);
+    //   userRef.current.id = userData.id;
+    //   userRef.current.name = userData.name;
+    // }
   }, []);
 
   useEffect(() => {
     // Only connect if user data is available and client is not already active
     if (
-      !userRef.current.id ||
-      !userRef.current.name ||
+      // !userRef.current.id ||
+      // !userRef.current.name ||
+      !user.id ||
+      !user.name ||
       clientRef.current?.active
     ) {
       console.log("Skipping WebSocket connection:", {
-        hasUser: !!userRef.current.id && !!userRef.current.name,
+        // hasUser: !!userRef.current.id && !!userRef.current.name,
+        hasUser: !!user.id && !!user.name,
         isClientActive: !!clientRef.current?.active,
       });
       return;
@@ -56,8 +63,8 @@ export function WebSocketProvider({ children }) {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       connectHeaders: {
-        userId: userRef.current.id,
-        name: userRef.current.name,
+        userId: user.id,
+        name: user.name,
       },
       debug: (str) => console.log("STOMP:", str),
     });
@@ -121,7 +128,7 @@ export function WebSocketProvider({ children }) {
       }
       clientRef.current = null;
     };
-  }, []); // Empty deps: run once unless manually triggered
+  }, [user.id, user.name]); // Empty deps: run once unless manually triggered
 
   // Subscribe to a topic
   const subscribe = useCallback((topic, handler) => {

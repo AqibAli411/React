@@ -66,9 +66,14 @@ function ChatSection({
   const joiningUsers = users.filter((user) => user.type === "joining");
   const onlineCount = joiningUsers.length;
 
-  console.log("messages ", messages);
-  console.log("users ", users);
-  console.log("joiningUsers ", joiningUsers);
+  useEffect(
+    function () {
+      console.log("messages ", messages);
+      console.log("users ", users);
+      console.log("joiningUsers ", joiningUsers);
+    },
+    [messages, users, joiningUsers],
+  );
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

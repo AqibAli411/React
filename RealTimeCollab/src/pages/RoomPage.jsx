@@ -30,7 +30,6 @@ export default function RoomPage() {
 
   // Memoize user data to prevent unnecessary updates
   const userData = useMemo(() => ({ id: null, name: null }), []);
-
   // Auto-generate room ID when switching to create mode
   useEffect(() => {
     if (isCreating && !roomId) {
@@ -106,8 +105,8 @@ export default function RoomPage() {
       });
 
       const { id, username, userId } = await response.json();
-      userData.id = userId;
-      userData.name = username;
+      userData.id = roomId;
+      userData.name = name;
       navigate(`/room/${id}?name=${username}&id=${userId}`);
     } catch (err) {
       console.error("Failed to create room:", err);
@@ -122,12 +121,19 @@ export default function RoomPage() {
       if (!response.ok) throw new Error("Room cannot be found!");
 
       const { id, userId, username } = await response.json();
-      userData.id = userId;
-      userData.name = username;
-      navigate(`/room/${id}?name=${name}&id=${randomNumber()}`);
+
+      console.log("from room controller : ", userId, " ", username);
+
+      const idOfUser = randomNumber();
+      userData.id = idOfUser;
+      userData.name = name;
+
+      navigate(`/room/${id}?name=${name}&id=${idOfUser}`);
     } catch (err) {
       console.error("Failed to join room:", err);
     }
+
+    console.log("here in the room page : ", userData);
   };
 
   // Connect WebSocket after user data is set
@@ -135,7 +141,7 @@ export default function RoomPage() {
     if (userData.id && userData.name) {
       connectWithUser(userData);
     }
-  }, [userData.id, userData.name, connectWithUser]);
+  }, [userData.id, userData.name, connectWithUser, userData]);
 
   const handleBack = () => {
     navigate(-1);
@@ -193,7 +199,7 @@ export default function RoomPage() {
           className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 font-medium transition-all duration-200 ${buttonSecondaryClasses} hover:scale-105`}
         >
           <ArrowLeft size={18} />
-          Back
+          BackCreate
         </button>
         <button
           onClick={toggleTheme}
