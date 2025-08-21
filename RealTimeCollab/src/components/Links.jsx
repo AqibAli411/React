@@ -4,18 +4,21 @@ function Links() {
   return (
     <>
       <ul className="flex items-center justify-center gap-8">
-        {["Features", "Solutions", "Resources", "Pricing"].map((item, i) => (
-          <Link key={i}>{item}</Link>
+        {["Features", "Solutions", "Resources"].map((item, i) => (
+          <Link key={i} className="hover:text-stone-700">{item}</Link>
         ))}
       </ul>
 
       <ul className="flex items-center justify-center gap-6">
-        <Link>Sign in</Link>
+        <Link>About</Link>
         {/* <Link className="gradient-border text-black px-4 py-2 rounded-xl">
           Get demo
         </Link> */}
-        <Link className="rounded-md bg-blue-500 px-4 py-2 font-medium text-stone-100">
-          Join Now
+        <Link
+          to="room"
+          className="flex transform items-center justify-center rounded-xl bg-blue-500 px-4 py-2 font-medium text-stone-100 transition-all duration-100 hover:-translate-y-[0.5px] hover:scale-101 hover:bg-blue-600"
+        >
+          Join Room
         </Link>
       </ul>
     </>

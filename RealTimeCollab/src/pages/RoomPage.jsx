@@ -104,6 +104,7 @@ export default function RoomPage() {
         }),
       });
 
+      //solve this mystry for me mama
       const { id, username, userId } = await response.json();
       userData.id = roomId;
       userData.name = name;
@@ -160,9 +161,7 @@ export default function RoomPage() {
     }
   };
 
-  const themeClasses = isDarkMode
-    ? "bg-neutral-900"
-    : "bg-gradient-to-br from-blue-50 via-white to-neutral-50";
+  const themeClasses = isDarkMode ? "bg-neutral-900" : "bg-white";
 
   const inputClasses = isDarkMode
     ? "bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700"
@@ -199,7 +198,7 @@ export default function RoomPage() {
           className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 font-medium transition-all duration-200 ${buttonSecondaryClasses} hover:scale-105`}
         >
           <ArrowLeft size={18} />
-          BackCreate
+          Back
         </button>
         <button
           onClick={toggleTheme}
@@ -212,7 +211,7 @@ export default function RoomPage() {
 
       {/* Main Card */}
       <div
-        className={`relative w-full max-w-lg rounded-3xl border border-gray-300 p-8`}
+        className={`relative w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800`}
       >
         {/* Header */}
         <div className="mb-8 text-center">

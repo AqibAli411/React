@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import Background from "../components/Background";
 import HeroSection from "../components/HeroSection";
 import SideSvgs from "../components/SideSvgs";
+import FeaturesSection from "./Features";
 
 function HomePage() {
   return (
@@ -11,6 +12,7 @@ function HomePage() {
         <HeroSection />
         <SideSvgs />
       </Background>
+      <FeaturesSection />
     </>
   );
 }
