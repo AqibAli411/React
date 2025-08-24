@@ -5,12 +5,14 @@ function Links() {
     <>
       <ul className="flex items-center justify-center gap-8">
         {["Features", "Solutions", "Resources"].map((item, i) => (
-          <Link key={i} className="hover:text-stone-700">{item}</Link>
+          <Link key={i} className="underline-animation">
+            {item}
+          </Link>
         ))}
       </ul>
 
       <ul className="flex items-center justify-center gap-6">
-        <Link>About</Link>
+        <Link className="underline-animation">About</Link>
         {/* <Link className="gradient-border text-black px-4 py-2 rounded-xl">
           Get demo
         </Link> */}

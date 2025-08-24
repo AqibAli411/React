@@ -1,8 +1,9 @@
-function Link({ className="", children }) {
-
+function Link({ className = "", children }) {
   return (
-    <li className={className} >
-      <a href='#'>{children}</a>
+    <li>
+      <a className={className} href="#">
+        {children}
+      </a>
     </li>
   );
 }

@@ -22,7 +22,7 @@ const FeaturesRow = () => {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-12">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-12 md:divide-x md:divide-gray-200">
         {features.map((feature, index) => (
           <div key={index} className="text-center md:px-6">

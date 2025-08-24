@@ -1,6 +1,6 @@
 import { Send, Bot, Users, MoveLeft, MoveRight, Loader2 } from "lucide-react";
 import { memo, useEffect, useState, useRef } from "react";
-import useCollaboration from "../pages/useCollabration";
+import useCollaboration from "../hooks/useCollabration";
 
 // Helper functions - use the imported ones from utils in real implementation
 const formatTimestamp = (timestamp) => {

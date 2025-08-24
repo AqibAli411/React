@@ -3,7 +3,7 @@ import { WebSocketProvider } from "../context/useWebSocketContext";
 function AppLayout() {
   return (
     <WebSocketProvider>
-      <Outlet />;
+      <Outlet />
     </WebSocketProvider>
   );
 }

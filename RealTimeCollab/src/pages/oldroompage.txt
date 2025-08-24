@@ -9,7 +9,7 @@ import {
   Users,
   Plus,
   LogIn,
-  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWebSocket } from "../context/useWebSocketContext";
@@ -161,20 +161,48 @@ export default function RoomPage() {
     }
   };
 
+  const themeClasses = isDarkMode ? "bg-neutral-900" : "bg-white";
+
+  const inputClasses = isDarkMode
+    ? "bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700"
+    : "bg-white/70 border-slate-200 text-slate-800 placeholder-slate-500 focus:border-blue-400 focus:bg-white";
+
+  const buttonPrimaryClasses = isDarkMode
+    ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25"
+    : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/25";
+
+  const buttonSecondaryClasses = isDarkMode
+    ? "bg-neutral-700/50 hover:bg-neutral-600/50 text-neutral-300 border-neutral-600/50"
+    : "bg-neutral-100/50 hover:bg-neutral-200/50 text-neutral-600 border-neutral-300/50";
+
+  const toggleActiveClasses = isDarkMode
+    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25"
+    : "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25";
+
+  const toggleInactiveClasses = isDarkMode
+    ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/30"
+    : "text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100/50";
+
+  const roomIdCardClasses = isDarkMode
+    ? "bg-gradient-to-r from-neutral-700/50 to-neutral-600/50 border-neutral-600/30"
+    : "bg-gradient-to-r from-blue-50/50 to-neutral-50/50 border-blue-200/30";
+
   return (
-    <div className="flex items-center justify-center bg-neutral-50 px-4 py-8 dark:bg-neutral-900">
+    <div
+      className={`flex min-h-screen items-center justify-center px-4 py-8 ${themeClasses}`}
+    >
       {/* Header Controls */}
       <div className="absolute top-6 right-6 left-6 z-10 flex items-center justify-between">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 font-medium text-neutral-700 transition-all duration-200 hover:scale-105 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 font-medium transition-all duration-200 ${buttonSecondaryClasses} hover:scale-105`}
         >
           <ArrowLeft size={18} />
           Back
         </button>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 font-medium text-neutral-700 transition-all duration-200 hover:scale-105 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 font-medium transition-all duration-200 ${buttonSecondaryClasses} hover:scale-105`}
         >
           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           {isDarkMode ? "Light" : "Dark"}
@@ -182,30 +210,31 @@ export default function RoomPage() {
       </div>
 
       {/* Main Card */}
-      <div className="relative w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+      <div
+        className={`relative w-full max-w-lg rounded-3xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800`}
+      >
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-            <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div
+            className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl ${isDarkMode ? "bg-blue-500/20" : "bg-blue-100"}`}
+          >
+            <Users
+              className={`h-8 w-8 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
+            />
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-neutral-800 dark:text-white">
+          <h1
+            className={`mb-2 text-3xl font-bold ${isDarkMode ? "text-white" : "text-neutral-800"}`}
+          >
             {isCreating ? "Create Room" : "Join Room"}
           </h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
-            {isCreating
-              ? "Start a new collaboration session"
-              : "Join an existing room"}
-          </p>
         </div>
 
         {/* Mode Toggle */}
-        <div className="mb-8 flex rounded-xl bg-neutral-100 p-1 dark:bg-neutral-700">
+        <div className="mb-8 flex rounded-2xl bg-neutral-100/50 p-1 dark:bg-neutral-700/50">
           <button
             onClick={() => handleModeSwitch(true)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-all duration-200 ${
-              isCreating
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all duration-300 ${
+              isCreating ? toggleActiveClasses : toggleInactiveClasses
             }`}
           >
             <Plus size={18} />
@@ -213,10 +242,8 @@ export default function RoomPage() {
           </button>
           <button
             onClick={() => handleModeSwitch(false)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-all duration-200 ${
-              !isCreating
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all duration-300 ${
+              !isCreating ? toggleActiveClasses : toggleInactiveClasses
             }`}
           >
             <LogIn size={18} />
@@ -228,7 +255,9 @@ export default function RoomPage() {
         <div className="space-y-6">
           {/* Name Input */}
           <div>
-            <label className="mb-3 block text-sm font-medium text-neutral-700 dark:text-neutral-200">
+            <label
+              className={`mb-3 block text-sm font-semibold ${isDarkMode ? "text-neutral-200" : "text-neutral-700"}`}
+            >
               Your Name
             </label>
             <input
@@ -239,15 +268,15 @@ export default function RoomPage() {
                 if (nameError) validateName(e.target.value);
               }}
               onBlur={() => validateName(name)}
-              className={`w-full rounded-xl border bg-white px-4 py-3 font-medium text-neutral-800 placeholder-neutral-500 transition-all duration-200 dark:bg-neutral-700 dark:text-white dark:placeholder-neutral-400 ${
+              className={`w-full rounded-2xl border-2 px-4 py-4 font-medium transition-all duration-200 ${inputClasses} ${
                 nameError
-                  ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                  : "border-neutral-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-600"
+                  ? "border-red-400 focus:border-red-400"
+                  : "focus:ring-4 focus:ring-blue-500/10"
               }`}
               placeholder="Enter your display name"
             />
             {nameError && (
-              <p className="mt-2 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+              <p className="mt-2 flex items-center gap-1 text-sm text-red-500">
                 <span className="h-1 w-1 rounded-full bg-red-500"></span>
                 {nameError}
               </p>
@@ -258,27 +287,36 @@ export default function RoomPage() {
             <>
               {/* Generated Room ID */}
               <div>
-                <label className="mb-3 block text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                <label
+                  className={`mb-3 block text-sm font-semibold ${isDarkMode ? "text-neutral-200" : "text-neutral-700"}`}
+                >
                   Room ID
                 </label>
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-600 dark:bg-neutral-700/50">
+                <div
+                  className={`rounded-2xl border-2 p-4 ${roomIdCardClasses}`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       {isGenerating ? (
                         <div className="flex items-center gap-3">
                           <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-                          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                          <span
+                            className={`text-sm ${isDarkMode ? "text-neutral-400" : "text-neutral-500"}`}
+                          >
                             Generating...
                           </span>
                         </div>
                       ) : (
                         <div>
-                          <div className="mb-1">
-                            <span className="text-xs font-medium tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+                          <div className="mb-1 flex items-center gap-2">
+                            <Sparkles size={16} className="text-blue-500" />
+                            <span
+                              className={`text-xs font-medium tracking-wider uppercase ${isDarkMode ? "text-neutral-400" : "text-neutral-500"}`}
+                            >
                               Your Room Code
                             </span>
                           </div>
-                          <div className="font-mono text-2xl font-bold tracking-widest text-blue-600 dark:text-blue-400">
+                          <div className="font-mono text-2xl font-bold tracking-widest text-blue-600">
                             {roomId}
                           </div>
                         </div>
@@ -288,19 +326,19 @@ export default function RoomPage() {
                       <button
                         onClick={generateRoomId}
                         disabled={isGenerating}
-                        className="rounded-lg border border-neutral-200 bg-white p-2.5 text-neutral-600 transition-all duration-200 hover:scale-105 hover:bg-neutral-50 disabled:opacity-50 disabled:hover:scale-100 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600"
+                        className={`rounded-xl p-3 transition-all duration-200 ${buttonSecondaryClasses} hover:scale-105 disabled:opacity-50`}
                         title="Generate new ID"
                       >
-                        <RefreshCw size={16} />
+                        <Sparkles size={16} />
                       </button>
                       <button
                         onClick={copyToClipboard}
                         disabled={isGenerating}
-                        className={`rounded-lg p-2.5 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${
+                        className={`rounded-xl p-3 transition-all duration-200 ${
                           copied
-                            ? "border border-green-200 bg-green-100 text-green-700 dark:border-green-500/30 dark:bg-green-500/20 dark:text-green-400"
-                            : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600"
-                        }`}
+                            ? "bg-green-500 text-white"
+                            : buttonSecondaryClasses
+                        } hover:scale-105 disabled:opacity-50`}
                         title={copied ? "Copied!" : "Copy to clipboard"}
                       >
                         {copied ? <Check size={16} /> : <Clipboard size={16} />}
@@ -313,7 +351,7 @@ export default function RoomPage() {
               <button
                 onClick={handleCreate}
                 disabled={isGenerating || !name.trim()}
-                className="w-full rounded-xl bg-blue-600 py-3.5 font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:bg-blue-700 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-blue-600"
+                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 disabled:hover:tranneutral-y-0 cursor-pointer hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
               >
                 <span className="flex items-center justify-center gap-2">
                   <Users size={20} />
@@ -325,7 +363,9 @@ export default function RoomPage() {
             <>
               {/* Join Room ID Input */}
               <div>
-                <label className="mb-3 block text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                <label
+                  className={`mb-3 block text-sm font-semibold ${isDarkMode ? "text-neutral-200" : "text-neutral-700"}`}
+                >
                   Room ID
                 </label>
                 <input
@@ -339,16 +379,16 @@ export default function RoomPage() {
                     if (roomIdError) validateRoomId(value);
                   }}
                   onBlur={() => validateRoomId(joinRoomId)}
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-center font-mono text-lg font-medium tracking-widest text-neutral-800 placeholder-neutral-500 transition-all duration-200 dark:bg-neutral-700 dark:text-white dark:placeholder-neutral-400 ${
+                  className={`w-full rounded-2xl border-2 px-4 py-4 text-center font-mono text-lg tracking-widest transition-all duration-200 ${inputClasses} ${
                     roomIdError
-                      ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                      : "border-neutral-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-600"
+                      ? "border-red-400 focus:border-red-400"
+                      : "focus:ring-4 focus:ring-blue-500/10"
                   }`}
                   placeholder="XXXXXX"
                   maxLength={6}
                 />
                 {roomIdError && (
-                  <p className="mt-2 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                  <p className="mt-2 flex items-center gap-1 text-sm text-red-500">
                     <span className="h-1 w-1 rounded-full bg-red-500"></span>
                     {roomIdError}
                   </p>
@@ -358,7 +398,7 @@ export default function RoomPage() {
               <button
                 onClick={handleJoin}
                 disabled={!name.trim() || !joinRoomId.trim()}
-                className="w-full rounded-xl bg-blue-600 py-3.5 font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:bg-blue-700 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-blue-600"
+                className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${buttonPrimaryClasses} hover:-tranneutral-y-0.5 disabled:hover:tranneutral-y-0 cursor-pointer hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
               >
                 <span className="flex items-center justify-center gap-2">
                   <Users size={20} />

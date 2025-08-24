@@ -56,3 +56,27 @@ body {
   }
 }
 
+.underline-animation {
+  position: relative;
+  display: inline-block;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 500;
+  padding: 8px 0;
+}
+
+.underline-animation::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background-color: #3b82f6;
+  transform: scaleX(0);
+  transition: transform 0.3s ease-out;
+}
+
+.underline-animation:hover::after {
+  transform: scaleX(1);
+}
